@@ -1029,5 +1029,95 @@ LowVol        1120
 HighVol       1120
 ExtremeVol    1120
 Name: count, dtype: int64
+Tolkning: TF_EQ = 1.125, MR_EQ = 0.875, TF_FX = 2.5, MR_FX = 8.0, är inte jämnt bra i alla regimer. Den är bra totalt, men drivs av olika motorer i olika miljöer. Det viktigaste fyndet är att TF_EQ faller sönder i 
+ExtremeVol. I ExtremeVol har TF_EQ:
+Total PnL = -37,116
+Avg Daily PnL = -33.14
+Sharpe-like = -0.0877
+Max DD Abs = -263,933
+Det är en stor röd flagga, samtidigt ser vi att portföljen som helhet fortfarande tjänar pengar i ExtremeVol:
+Avg Daily Return = 0.000956
+Sharpe-like = 1.146
+CAGR-like = 0.244
+Calmar-like = 1.299
+Det betyder att de andra strategierna räddar portföljen när TF_EQ blir svag. Det som räddar portföljen i ExtremeVol är MR_EQ och MR_FX
+MR_EQ I ExtremeVol:
+Total PnL = 194,143
+Sharpe-like = 0.862
+klart positiv, det här är starkt. Våran equities mean reversion verkar alltså fungera bäst när det brinner.
+MR_FX håller också ihop i ExtremeVol:
+Total PnL = 85,629
+Sharpe-like = 0.300
+Fortfarande positiv men DD i absolutnivå är stor. Det här säger att MR_FX fortfarande hjälper, men den är inte lika “ren” som MR_EQ i stress.
+TF_FX är stark i HighVol men tappar i ExtremeVol:
+Vi har:
+HighVol: stark
+ExtremeVol: nästan platt
+Så TF_FX verkar vara en bra mellan-regime-strategi, men inte vår bästa krisstrategi.
+Regime-karta per strategi:
 
+MR_EQ
+LowVol: i princip död
+MidVol: okej
+HighVol: svag
+ExtremeVol: mycket stark
+MR_EQ är alltså tydligt en crisis convexity-strategi. Den lever inte för lågvol, den lever för kaos.
+
+MR_FX
+LowVol: stark
+MidVol: svag
+HighVol: stark
+ExtremeVol: positiv men svagare riskjusterat
+MR_FX är mer allround, men inte perfekt jämn.
+
+TF_EQ
+LowVol: okej
+MidVol: stark
+HighVol: stark
+ExtremeVol: dålig
+Det här är nästan textbook trend/carry-liknande beteende: bra i normala och tydliga trender, sämre i extremt choppig stress.
+
+TF_FX
+LowVol: liten
+MidVol: svag
+HighVol: stark
+ExtremeVol: nästan neutral
+Den verkar mest vara en high-vol-trend motor, inte en crisis hedge.
+
+Portföljnivå
+LowVol : Portföljen är bra, Sharpe-like 2.64, låg DD och stabil
+MidVol: Det här är svagaste “normala” regimet, Sharpe-like 1.40, fortfarande bra, men lägst bland de tre första
+HighVol: Portföljen ser mycket stark ut, Sharpe-like 1.67, bäst Calmar-like efter LowVol
+ExtremeVol: Fortfarande bra, men klart sämre riskjusterat, Sharpe-like 1.15, Max DD % = -18.81
+Det här är nyckeln: portföljen överlever och tjänar pengar i extreme vol, men den gör det inte gratis. Vad betyder detta för vårat val av exposure? Det här är det viktiga beslutsperspektivet:
+
+Varför MR_FX = 8.0 ändå ser rimligt ut, trots hög scaling::
+Kraschar inte i ExtremeVol. Bidrar positivt i alla regimer utom knappt MidVol och har låg korrelation mot resten. Det betyder att hög MR_FX inte ser ut som ett uppenbart misstag. Men det verkliga 
+problemet verkar inte vara MR_FX. Det som sticker ut mest är inte att MR_FX är för hög. Det är att TF_EQ verkar vara för stor eller för odämpad i ExtremeVol. Det är den strategi som tydligast 
+skadar portföljen i stress. Vi har troligen hittat rätt område för MR_FX. Det vi bör överväga nu är inte främst att justera MR_FX igen, utan att göra något med TF_EQ i stressregim.
+Två bra vägar framåt:
+1. Regime-baserad scaling på TF_EQ
+Exempel:
+LowVol / MidVol / HighVol: normal TF_EQ target
+ExtremeVol: sänk TF_EQ till t.ex. 50–70% av normal target
+Konceptuellt:
+if current_regime == "ExtremeVol":
+    tf_eq_multiplier = 0.6
+else:
+    tf_eq_multiplier = 1.0
+
+Då behåller vi den strategi som är stark i normala miljöer, men undviker att den slår sönder portföljen i extreme stress.
+
+2. Regime-baserad rotation mellan TF_EQ och MR_EQ
+Eftersom TF_EQ är bra i Mid/HighVol och MR_EQ är bäst i ExtremeVol kan vi göra en enkel rotation:
+HighVol: TF_EQ fullt på
+ExtremeVol: TF_EQ ned, MR_EQ upp
+
+Vad krisperioderna säger
+Det här är också väldigt användbart. De bra perioderna är Brexit_2016: stark, BankStress_2023: stark, Taper_2013: stark, CHF_Event_2015: stark. Blandade perioder: Covid_2020: positiv CAGR men stor DD,
+Inflation_2022: okej men inte fantastisk. Svaga perioder: SpringShock_2025: dålig, Volmageddon_2018: dålig, YenCarryStress_2024: dålig. Det här säger att vi inte har en portfölj som är immun mot alla 
+stressregimer. Den verkar särskilt känslig mot vissa typer av equity-vol spikes, yen/carry dislocations, abrupta regime flips. Det är ännu ett argument för att lägga till enkel stress-scaling. Den mest 
+kvantitativa läsningen av detta är att MR_FX = 8.0 ser försvarbart ut. Den största återstående ineffektiviteten verkar vara TF_EQ i ExtremeVol. portföljen är redan robust, men kan sannolikt förbättras 
+mer genom regime-aware de-risking än genom ytterligare statisk optimering av MR_FX. Slutsatsen från den här regimenalysen är att MR_FX = 8.0 ser bra ut och det största problemet i stress verkar vara 
+TF_EQ. Nästa förbättring är sannolikt inte mer manuell target-tuning, utan en regime-aware overlay, främst på TF_EQ
 
