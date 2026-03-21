@@ -1265,4 +1265,467 @@ MR_EQ: stark
 TF_FX: okej
 TF_EQ: nu okej efter overlay
 MR_FX: dålig
-Det skriker efter en regime-rotation, dra ned MR_FX och låt MR_EQ fortsätta bära mer av stressregimen
+Det skriker efter en regime-rotation, vi testar att dra ned MR_FX till häften och låter MR_EQ fortsätta bära mer av stressregimen:
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  317523.925146      62.089152  1793.156471  14550.281285 -19057.043639         0.307391            0.382895           0.034626
+MR_FX  203660.079214      39.824028  1331.772952  13457.224177 -33300.906073         0.450528            0.245589           0.029903
+MR_EQ  183624.909580      35.906318  1384.684954  19536.240632 -24675.584868         0.115370            0.221429           0.025931
+TF_FX  124462.368074      24.337577   964.967667  17443.234242 -18931.015492         0.072937            0.150086           0.025221
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ     TF_FX
+MR_EQ  1.000000  0.026853  0.090580 -0.017111
+MR_FX  0.026853  1.000000  0.004259 -0.058313
+TF_EQ  0.090580  0.004259  1.000000 -0.046254
+TF_FX -0.017111 -0.058313 -0.046254  1.000000
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 879271.2820
+CAGR: 0.2273
+Max Drawdown %: -17.6569
+Sharpe (ann.): 1.4219
+Calmar: 1.2873
+Avg Daily Return: 0.0007
+Daily Vol: 0.0074
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 147.41856697510423
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -17.66%
+Max DD% (Closed trades only): -14.10%
+--- PORTFOLIO METRICS BY VOL REGIME ---
+            Days  Avg Daily Return  Daily Vol  Sharpe-like  Worst Day  Best Day   Max DD %  CAGR-like  Calmar-like
+Regime                                                                                                            
+LowVol      1120          0.000889   0.004088     3.452717  -0.013917  0.019379  -6.361094   0.248428     3.905422
+MidVol      1120          0.000485   0.005778     1.332846  -0.024483  0.019322  -9.371556   0.125263     1.336634
+HighVol     1120          0.000552   0.007113     1.231787  -0.029801  0.026111 -11.106320   0.141887     1.277534
+ExtremeVol  1120          0.000756   0.010959     1.094379  -0.062884  0.055578 -16.804250   0.191476     1.139449
+--- PORTFOLIO METRICS BY CRISIS PERIOD ---
+                          Start         End  Days   Equity Start     Equity End      CAGR  Max Drawdown %  Sharpe (ann.)     Calmar  Avg Daily Return  Daily Vol  Worst Day  Best Day
+Period                                                                                                                                                                               
+BankStress_2023      2023-03-01  2023-04-14    39  540706.569454  558158.036414  0.301723       -3.474395       2.315226   8.684192          0.000789   0.005411  -0.015463  0.012756
+Brexit_2016          2016-06-01  2016-07-15    39  167228.317959  194320.125909  2.477765       -4.744421       4.559142  52.224799          0.003792   0.013204  -0.011739  0.053297
+CHF_Event_2015       2015-01-01  2015-02-13    38  119119.510419  133684.792848  1.726989       -4.210226       5.081649  41.018905          0.003170   0.009902  -0.012036  0.029458
+Covid_2020           2020-02-20  2020-04-30    61  423824.592720  412343.642347 -0.133502      -17.656882      -0.222469  -0.756092         -0.000270   0.019267  -0.056149  0.055578
+Inflation_2022       2022-01-02  2022-10-31   260  518320.595512  544314.145916  0.061176       -8.999842       0.505522   0.679743          0.000211   0.006619  -0.028491  0.025418
+SpringShock_2025     2025-03-16  2025-04-18    30  791272.860913  746141.656367 -0.477957       -8.295752      -4.160943  -5.761468         -0.001924   0.007341  -0.019779  0.013483
+Taper_2013           2013-05-15  2013-07-15    62   75836.739245   84144.479405  0.863463       -6.457995       2.844950  13.370450          0.001640   0.009151  -0.039330  0.029401
+Volmageddon_2018     2018-01-21  2018-02-20    27  312417.708748  304105.894527 -0.287960      -11.056303      -1.007339  -2.604487         -0.000932   0.014682  -0.042058  0.022702
+YenCarryStress_2024  2024-04-01  2024-05-15    39  718815.989090  697291.876005 -0.223039       -9.352875      -1.081037  -2.384714         -0.000598   0.008776  -0.020600  0.028869
+--- STRATEGY METRICS BY VOL REGIME ---
+    Days      Total PnL  Avg Daily PnL    Daily Vol  Sharpe-like     Worst Day      Best Day  Positive Days %  Negative Days %     Max DD Abs Strategy      Regime
+0   1120     957.698050       0.855088   799.829106     0.016971  -8293.391165   8385.586172         0.077679         0.082143  -43905.481574    MR_EQ      LowVol
+1   1120    7650.290532       6.830617   911.249961     0.118993 -10644.711530   7091.296868         0.116964         0.128571  -24426.315133    MR_EQ      MidVol
+2   1120   82193.928257      73.387436  1203.417443     0.968068 -10328.920293  11847.652826         0.125893         0.116071  -19513.312171    MR_EQ     HighVol
+3   1120   92822.992741      82.877672  2415.810650     0.544597 -24675.584868  19536.240632         0.206250         0.181250  -67722.802146    MR_EQ  ExtremeVol
+4   1120  141900.026368     126.696452   895.235312     2.246609  -8837.255645   6924.948192         0.525893         0.218750  -11947.903338    MR_FX      LowVol
+5   1120   85492.078281      76.332213  1311.936650     0.923624 -15271.687444   6338.149282         0.502679         0.248214  -26245.112025    MR_FX      MidVol
+6   1120   30147.378734      26.917302  1586.823479     0.269279 -20562.870518  13457.224177         0.499107         0.235714  -44649.649798    MR_FX     HighVol
+7   1120  -53286.073960     -47.576852  1744.750028    -0.432875 -33300.906073   7140.119251         0.522321         0.240179 -119392.925226    MR_FX  ExtremeVol
+8   1120  111411.974421      99.474977  1255.106613     1.258153  -8236.395755   8085.568941         0.381250         0.303571  -32196.024623    TF_EQ      LowVol
+9   1120   73080.829979      65.250741  1886.628305     0.549034 -10636.234902   7935.379391         0.341964         0.328571  -48787.020445    TF_EQ      MidVol
+10  1120  124869.588625     111.490704  2264.833607     0.781453 -16447.293405  14550.281285         0.350893         0.291964  -53521.451006    TF_EQ     HighVol
+11  1120    8161.532121       7.287082  2102.110197     0.055030 -19057.043639  12998.732609         0.329464         0.283929  -77516.932971    TF_EQ  ExtremeVol
+12  1120   25603.980622      22.860697   636.741547     0.569937  -6971.482139  13991.658832         0.064286         0.071429  -10590.643697    TF_FX      LowVol
+13  1120   -1386.114847      -1.237603   773.640327    -0.025395  -9626.319422   8340.344159         0.080357         0.087500  -29644.935786    TF_FX      MidVol
+14  1120   41590.190850      37.134099  1293.104818     0.455868 -18931.015492  14608.071792         0.090179         0.104464  -32180.967610    TF_FX     HighVol
+15  1120   58654.311448      52.369921  1255.667277     0.662076 -13735.125624  17443.234242         0.098214         0.089286  -34699.506443    TF_FX  ExtremeVol
+--- VOL REGIME DAY COUNTS ---
+HighVol       1120
+MidVol        1120
+LowVol        1120
+ExtremeVol    1120
+Name: count, dtype: int64
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0647
+AvgWorstDD: -0.0060
+P(Breach -5%): 0.0018
+P(Breach -10%): 0.0000
+Count Breach -5%: 7
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9237
+P(Pass Verification): 0.8685
+P(Reach 1st payout):  0.8607
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18475, 'mean': 72.537050067659, 'median': 56.0, 'p05': 11.0, 'p95': 190.0}
+Verification: {'count': 17369, 'mean': 35.91248776555933, 'median': 23.0, 'p05': 4.0, 'p95': 112.0}
+Payout: {'count': 17213, 'mean': 22.265497008075293, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             17213
+Challenge        1525
+Verification     1106
+Funded            156
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    2787
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2021-11-26   535894.675624      -0.064681
+2013-06-20    79070.666896      -0.063884
+2020-09-04   459243.579515      -0.060645
+2020-03-20   374855.455397      -0.059752
+2024-04-29   700442.677621      -0.058351
+2015-06-23   143028.350109      -0.053527
+2016-06-24   169137.420963      -0.050756
+2020-03-12   389909.517845      -0.049589
+2015-08-12   134592.714855      -0.048264
+2020-09-03   482600.063696      -0.047988
+Med TF_EQ=0.5 och MR_FX=0.5 i ExtremeVol får vi ungefär:
+CAGR: 25.01% → 22.73%
+Max DD: -15.91% → -17.66%
+Sharpe: 1.493 → 1.422
+Calmar: 1.572 → 1.287
+P(Breach -5%): 0.0023 → 0.0018
+Payout: 0.8529 → 0.8607
+Fail reasons / MaxLoss: 2942 → 2787
+Så FTMO blev lite bättre men den vanliga portföljprofilen blev sämre ganska tydligt. Vi har nu hittat att TF_EQ behövde dämpas i ExtremeVol men MR_FX på 0.5 blev för hårt nedskalad så vi testar 0.75 
+för MR_FX istället:
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  351701.771284      68.772345  2022.627636  16595.652182 -20586.909578         0.307391            0.369725           0.034001
+MR_FX  260042.363276      50.849113  1652.358894  22926.579109 -36150.204723         0.450528            0.273369           0.030774
+MR_EQ  200957.882032      39.295636  1530.310927  20807.757148 -26281.747456         0.115370            0.211256           0.025678
+TF_FX  138549.771901      27.092251  1098.424486  20467.550635 -21840.411959         0.072937            0.145650           0.024665
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ     TF_FX
+MR_EQ  1.000000  0.021403  0.090358 -0.017162
+MR_FX  0.021403  1.000000  0.003117 -0.082523
+TF_EQ  0.090358  0.003117  1.000000 -0.047702
+TF_FX -0.017162 -0.082523 -0.047702  1.000000
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1001251.7885
+CAGR: 0.2387
+Max Drawdown %: -15.8724
+Sharpe (ann.): 1.4634
+Calmar: 1.5041
+Avg Daily Return: 0.0007
+Daily Vol: 0.0075
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 151.88590031568364
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -15.87%
+Max DD% (Closed trades only): -13.70%
+--- PORTFOLIO METRICS BY VOL REGIME ---
+            Days  Avg Daily Return  Daily Vol  Sharpe-like  Worst Day  Best Day   Max DD %  CAGR-like  Calmar-like
+Regime                                                                                                            
+LowVol      1120          0.000912   0.004223     3.427543  -0.013034  0.019379  -4.993496   0.255344     5.113523
+MidVol      1120          0.000360   0.005850     0.976314  -0.024490  0.018896  -8.351752   0.090170     1.079659
+HighVol     1120          0.000823   0.007257     1.800646  -0.029801  0.029401  -9.330420   0.222282     2.382332
+ExtremeVol  1120          0.000707   0.011079     1.012530  -0.062884  0.056552 -15.001316   0.176501     1.176568
+--- PORTFOLIO METRICS BY CRISIS PERIOD ---
+                          Start         End  Days   Equity Start     Equity End      CAGR  Max Drawdown %  Sharpe (ann.)     Calmar  Avg Daily Return  Daily Vol  Worst Day  Best Day
+Period                                                                                                                                                                               
+BankStress_2023      2023-03-01  2023-04-14    39  633106.597396  654920.365589  0.324718       -3.474395       2.417612   9.346032          0.000845   0.005551  -0.015463  0.012742
+Brexit_2016          2016-06-01  2016-07-15    39  174378.191192  202372.146156  2.441435       -4.744421       4.400306  51.459071          0.003764   0.013578  -0.013895  0.053297
+CHF_Event_2015       2015-01-01  2015-02-13    38  119247.736299  133824.968557  1.726328       -5.007418       4.681879  34.475411          0.003178   0.010775  -0.020931  0.029458
+Covid_2020           2020-02-20  2020-04-30    61  450766.577204  447174.374598 -0.040889      -15.872426       0.043327  -0.257609          0.000052   0.019177  -0.052494  0.056552
+Inflation_2022       2022-01-02  2022-10-31   260  563086.255843  625267.670956  0.135537       -8.782280       0.981360   1.543303          0.000428   0.006930  -0.028491  0.027635
+SpringShock_2025     2025-03-16  2025-04-18    30  923216.481958  849168.430834 -0.603615      -10.593815      -4.842368  -5.697803         -0.002766   0.009068  -0.032774  0.013488
+Taper_2013           2013-05-15  2013-07-15    62   75693.262168   83736.467109  0.830650       -6.457995       2.759413  12.862345          0.001591   0.009155  -0.039330  0.029401
+Volmageddon_2018     2018-01-21  2018-02-20    27  326295.416872  318806.351045 -0.253562      -10.774651      -0.849727  -2.353321         -0.000787   0.014711  -0.042045  0.023812
+YenCarryStress_2024  2024-04-01  2024-05-15    39  843444.653099  818188.678871 -0.223039       -9.352875      -1.081037  -2.384714         -0.000598   0.008776  -0.020600  0.028869
+--- STRATEGY METRICS BY VOL REGIME ---
+    Days      Total PnL  Avg Daily PnL    Daily Vol  Sharpe-like     Worst Day      Best Day  Positive Days %  Negative Days %     Max DD Abs Strategy      Regime
+0   1120    2299.134546       2.052799   947.469155     0.034394  -9539.422654   9548.910927         0.083929         0.086607  -46882.275000    MR_EQ      LowVol
+1   1120  -21258.109660     -18.980455  1075.452438    -0.280166 -12419.701996   8285.608912         0.115179         0.133929  -37018.043007    MR_EQ      MidVol
+2   1120  117219.439556     104.660214  1329.976947     1.249217 -12051.253020  12871.201797         0.122321         0.114286  -22896.539677    MR_EQ     HighVol
+3   1120  102697.417589      91.694123  2620.057894     0.555560 -26281.747456  20807.757148         0.205357         0.173214  -72132.770336    MR_EQ  ExtremeVol
+4   1120  152505.401209     136.165537  1186.877416     1.821217 -17818.219545   7885.639966         0.526786         0.221429  -22714.963334    MR_FX      LowVol
+5   1120   98142.074588      87.626852  1645.702294     0.845252 -10058.879120  22926.579109         0.490179         0.253571  -40019.115926    MR_FX      MidVol
+6   1120  114679.013234     102.391976  1688.909595     0.962409 -14891.268215   7898.762880         0.520536         0.221429  -30796.922927    MR_FX     HighVol
+7   1120 -104690.795546     -93.473925  2338.932953    -0.634414 -36150.204723   8157.517017         0.512500         0.246429 -179928.640395    MR_FX  ExtremeVol
+8   1120  119789.808549     106.955186  1396.633955     1.215681  -9630.698506   9487.448796         0.382143         0.307143  -29600.400345    TF_EQ      LowVol
+9   1120   71443.638163      63.788963  2245.570760     0.450940 -18729.011483  16595.652182         0.340179         0.324107  -61343.959223    TF_EQ      MidVol
+10  1120  122023.168620     108.949258  2505.005797     0.690424 -15963.122996  15061.956847         0.357143         0.305357  -72539.202124    TF_EQ     HighVol
+11  1120   38445.155952      34.326032  2327.604588     0.234107 -20586.909578  15252.244582         0.324107         0.271429  -81667.179283    TF_EQ  ExtremeVol
+12  1120   23050.918821      20.581178   686.974529     0.475587  -8151.653299  15932.708956         0.066071         0.074107  -14227.614333    TF_FX      LowVol
+13  1120  -19158.135149     -17.105478  1102.157388    -0.246372 -21840.411959  11290.751076         0.081250         0.088393  -29615.563434    TF_FX      MidVol
+14  1120   66618.356108      59.480675  1324.156570     0.713078  -9853.108375  17081.497281         0.091071         0.102679  -21771.656024    TF_FX     HighVol
+15  1120   68038.632121      60.748779  1438.159748     0.670549 -16116.528351  20467.550635         0.094643         0.087500  -36050.516264    TF_FX  ExtremeVol
+--- VOL REGIME DAY COUNTS ---
+MidVol        1120
+LowVol        1120
+HighVol       1120
+ExtremeVol    1120
+Name: count, dtype: int64
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0647
+AvgWorstDD: -0.0061
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9233
+P(Pass Verification): 0.8666
+P(Reach 1st payout):  0.8582
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18466, 'mean': 72.25787934582476, 'median': 56.0, 'p05': 11.0, 'p95': 189.0}
+Verification: {'count': 17332, 'mean': 36.28831063927994, 'median': 24.0, 'p05': 4.0, 'p95': 112.0}
+Payout: {'count': 17164, 'mean': 22.252563505010485, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             17164
+Challenge        1534
+Verification     1134
+Funded            168
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    2836
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2021-11-26   581747.000857      -0.064681
+2013-06-20    78921.071485      -0.063884
+2020-09-04   496110.846185      -0.060654
+2024-04-29   821885.767997      -0.058351
+2020-03-20   406898.099956      -0.057160
+2020-06-11   442638.838499      -0.054885
+2015-06-23   142691.805536      -0.053527
+2016-06-24   176368.918198      -0.050756
+2015-08-12   134276.019264      -0.048264
+2020-09-03   521342.347828      -0.047988
+Jämfört med 0.50 för MR_FX får vi ungefär:
+CAGR: 22.73% → 23.87%
+Max DD: -17.66% → -15.87%
+Sharpe: 1.422 → 1.463
+Calmar: 1.287 → 1.504
+Payout: 0.8607 → 0.8582
+P(Breach -5%): 0.0018 → 0.0020
+Det är en förbättring, men jämför vi med baseline där vi utan overlay hade vi:
+Equity Start: 50000.0000 
+Equity End: 1436326.8904
+CAGR: 0.2711 
+Max Drawdown %: -17.8269
+Sharpe (ann.): 1.4272 
+Calmar: 1.5206 
+Avg Daily Return: 0.0008 
+Daily Vol: 0.0087 
+Max DD% (MTM equity): -17.83% 
+Max DD% (Closed trades only): -16.95% 
+Days: 3931 
+WorstDayDD: -0.0923 
+AvgWorstDD: -0.0070 
+P(Breach -5%): 0.0025 
+P(Breach -10%): 0.0000 
+Count Breach -5%: 10 
+Count Breach -10%: 0 
+P(Pass Challenge): 0.9237 
+P(Pass Verification): 0.8653 
+P(Reach 1st payout): 0.8557 
+Det vi får nu är i princip samma, det enda som skiljer är 4% mindre cagr och 2% mindre drawdown samt 2 fler breaches av -5%. FTMO payouts är i princip exakt samma Overlayn tillför inget 
+netto-värde, utan flyttar bara runt risk/return marginellt. Den overlay vi testat har räknat volatilitet på hela portföljen istället för enskild marknad, samt skalat ner hela strategin 
+istället för enskild marknad och det kan vara så att extremvol är olika bra eller dålig i olika marknader. Så vi vill först ta reda på alla strategimarknaders prestation i varje 
+volatilitetsregim:
+--- MARKET METRICS BY OWN VOL REGIME ---
+Strategy Market     Regime  Days     Total PnL  Avg Daily PnL   Daily Vol  Sharpe-like     Worst Day     Best Day  Positive Days %  Negative Days %    Max DD Abs
+   MR_EQ  US100     LowVol   946   4308.626524       4.554573  101.774500     0.710410   -683.415830   961.650095         0.045455         0.048626  -1965.097307
+   MR_EQ  US100     MidVol   946  13283.610092      14.041871  255.425673     0.872691  -2509.225976  1841.138029         0.097252         0.093023  -2666.240759
+   MR_EQ  US100    HighVol   946   9696.498801      10.249999  420.358510     0.387083  -2851.567802  1798.024459         0.136364         0.126850  -8266.600547
+   MR_EQ  US100 ExtremeVol   946  28879.666100      30.528188  741.952138     0.653169  -7720.925059  6249.581365         0.145877         0.096195 -19128.232083
+   MR_EQ   US30     LowVol   934   -402.477633      -0.430918   85.061205    -0.080420   -890.267423   866.918983         0.049251         0.067452  -2306.453734
+   MR_EQ   US30     MidVol   934   1740.779193       1.863789  155.646201     0.190090  -1049.291613  1047.871679         0.111349         0.113490  -5028.472392
+   MR_EQ   US30    HighVol   934  11820.144921      12.655401  244.718261     0.820937  -1718.271586  1209.526792         0.140257         0.109208  -6260.486504
+   MR_EQ   US30 ExtremeVol   934   9413.977317      10.079205  306.542224     0.521959  -2084.585130  1841.660093         0.120985         0.095289  -4808.283604
+   MR_EQ  US500     LowVol   945   5085.544942       5.381529   86.435971     0.988352   -704.853687  1014.614370         0.049735         0.044444  -1680.114485
+   MR_EQ  US500     MidVol   944   2529.763840       2.679835  170.289277     0.249816  -1078.857965  1214.351372         0.082627         0.112288  -4096.282752
+   MR_EQ  US500    HighVol   944   4119.945161       4.364349  296.999017     0.233273  -2734.594796  1213.430984         0.143008         0.151483  -7870.740862
+   MR_EQ  US500 ExtremeVol   945  15219.006708      16.104769  505.845375     0.505402  -6017.409820  4649.425811         0.123810         0.089947 -18244.570614
+   MR_FX EURCAD     LowVol  1120  69516.594730      62.068388  498.157333     1.977899  -4606.153938  2598.458486         0.257143         0.108929  -6966.447933
+   MR_FX EURCAD     MidVol  1120  50042.154332      44.680495  842.488582     0.841888  -8719.428240  6007.005585         0.268750         0.115179 -17346.297800
+   MR_FX EURCAD    HighVol  1119  26202.431286      23.415935  898.266501     0.413815 -14129.220523  5336.156604         0.268990         0.129580 -39485.910594
+   MR_FX EURCAD ExtremeVol  1120    130.042909       0.116110 1174.944147     0.001569 -15592.907607 10586.086209         0.277679         0.115179 -55085.331523
+   MR_FX EURCHF     LowVol  1120  11538.271795      10.302028  184.178413     0.887941  -2330.831175   848.557861         0.225000         0.134821  -5533.988414
+   MR_FX EURCHF     MidVol  1120  27906.110728      24.916170  436.981660     0.905145  -5449.017106  4625.955780         0.261607         0.104464  -9503.566518
+   MR_FX EURCHF    HighVol  1120  11509.584500      10.276415  538.674131     0.302842  -6832.307251  3360.255792         0.250000         0.104464 -21304.763840
+   MR_FX EURCHF ExtremeVol  1120  38359.297656      34.249373  975.544295     0.557322 -17537.951878 13851.138993         0.250893         0.103571 -20983.544332
+   MR_FX EURUSD     LowVol  1120  42239.872624      37.714172  955.057480     0.626867  -9333.241962  7169.131111         0.315179         0.151786 -19896.989467
+   MR_FX EURUSD     MidVol  1120  35405.881103      31.612394 1574.877441     0.318648 -26319.495152  5098.428008         0.325000         0.144643 -47815.882613
+   MR_FX EURUSD    HighVol  1120  63497.498691      56.694195 1515.706369     0.593778 -15202.216491  9456.441773         0.288393         0.157143 -23391.254294
+   MR_FX EURUSD ExtremeVol  1120  82453.792898      73.619458 2679.677043     0.436124 -49176.478391 20836.013311         0.317857         0.134821 -96699.727859
+   MR_FX GBPCHF     LowVol  1120  22261.824989      19.876629  656.613814     0.480544  -9879.051787  2995.523745         0.235714         0.089286 -21399.936208
+   MR_FX GBPCHF     MidVol  1120   3414.783531       3.048914  981.903025     0.049292 -15533.458510  6557.974262         0.213393         0.087500 -36171.642503
+   MR_FX GBPCHF    HighVol  1119  43227.582005      38.630547 1411.523555     0.434453 -17398.965113 21243.825322         0.234138         0.093834 -35014.653675
+   MR_FX GBPCHF ExtremeVol  1120  25815.640542      23.049679 2086.272636     0.175386 -39273.703401 10584.667874         0.279464         0.112500 -62563.759997
+   MR_FX USDCHF     LowVol  1120  69993.173532      62.493905  526.806095     1.883160  -4417.242756  2611.131803         0.291071         0.128571  -7449.351187
+   MR_FX USDCHF     MidVol  1120 -14195.282325     -12.674359  933.758319    -0.215472  -9650.463432  4143.988034         0.280357         0.136607 -50500.829302
+   MR_FX USDCHF    HighVol  1120 -48135.894943     -42.978478 1145.694044    -0.595501 -11842.737715  6203.772144         0.285714         0.144643 -57906.612970
+   MR_FX USDCHF ExtremeVol  1120  67271.643534      60.063967 1357.895626     0.702179 -24998.247634  6847.729057         0.293750         0.128571 -27991.149782
+   TF_EQ  US100     LowVol   946  35020.751464      37.019822  358.174573     1.640740  -1583.559369  1669.052870         0.386892         0.324524  -8243.572921
+   TF_EQ  US100     MidVol   946  -4815.732976      -5.090627  540.982901    -0.149378  -2980.141310  1910.607058         0.321353         0.310782 -12025.681336
+   TF_EQ  US100    HighVol   946  53234.839784      56.273615  715.445063     1.248616  -4580.282085  2947.530833         0.353066         0.272727 -11549.969579
+   TF_EQ  US100 ExtremeVol   946  -8208.820150      -8.677400 1216.862086    -0.113201  -7421.634411  5665.932788         0.300211         0.272727 -42930.664859
+   TF_EQ   US30     LowVol   934  25827.387466      27.652449  318.583819     1.377876  -1558.495741  1871.427687         0.392934         0.345824  -6097.856087
+   TF_EQ   US30     MidVol   934  18824.783177      20.155014  447.890354     0.714351  -2252.937970  2349.383108         0.350107         0.278373  -7686.558732
+   TF_EQ   US30    HighVol   934  12800.990373      13.705557  609.502006     0.356962  -3348.797695  2874.845552         0.329764         0.300857 -15989.881928
+   TF_EQ   US30 ExtremeVol   934  34226.902487      36.645506 1003.260267     0.579839  -8353.123764  6273.455256         0.324411         0.241970 -22435.175696
+   TF_EQ  US500     LowVol   945  32278.218374      34.156845  319.530762     1.696936  -1533.272224  1696.077677         0.390476         0.314286  -4675.467015
+   TF_EQ  US500     MidVol   944  15110.295322      16.006669  464.328041     0.547238  -3800.281622  1872.003919         0.340042         0.279661  -7739.064287
+   TF_EQ  US500    HighVol   944  20973.599071      22.217796  560.329829     0.629445  -4349.638419  2129.265477         0.340042         0.299788 -12958.143191
+   TF_EQ  US500 ExtremeVol   945  16459.883071      17.417866 1057.043000     0.261579  -6556.998225  6815.334661         0.316402         0.270899 -30296.559142
+   TF_FX EURJPY     LowVol  1120  -5880.482581      -5.250431   76.590042    -1.088236  -1229.552207   942.986438         0.014286         0.025893  -5880.482581
+   TF_FX EURJPY     MidVol  1120   1812.313332       1.618137  130.268608     0.197186  -1102.762435  1418.255400         0.033929         0.033929  -3657.052548
+   TF_FX EURJPY    HighVol  1119   3826.905804       3.419934  185.125001     0.293260  -1454.121741  2056.819356         0.045576         0.051832  -4000.011274
+   TF_FX EURJPY ExtremeVol  1120  13364.493848      11.932584  307.320613     0.616372  -3164.970723  2626.727087         0.059821         0.058036  -5671.579740
+   TF_FX GBPJPY     LowVol  1120  -8517.282895      -7.604717  207.273388    -0.582425  -1855.454302  2304.127647         0.045536         0.052679 -10320.583448
+   TF_FX GBPJPY     MidVol  1120   1558.870279       1.391848  207.477875     0.106493  -2594.120781  1770.588226         0.035714         0.039286  -4818.993031
+   TF_FX GBPJPY    HighVol  1119  10842.267183       9.689247  292.111734     0.526552  -1881.364128  3164.355864         0.042895         0.042895  -4828.378077
+   TF_FX GBPJPY ExtremeVol  1120  42316.012772      37.782154  768.243369     0.780707  -5629.377872 19933.447789         0.049107         0.031250  -9143.475938
+   TF_FX USDJPY     LowVol  1120   1933.906227       1.726702  103.673688     0.264392  -1149.280952  1288.018656         0.025000         0.026786  -2941.927131
+   TF_FX USDJPY     MidVol  1120   9543.325413       8.520826  136.731444     0.989267  -1257.167150  1576.017160         0.032143         0.026786  -2395.046255
+   TF_FX USDJPY    HighVol  1119  16746.075593      14.965215  215.040018     1.104750  -2225.977078  2611.856569         0.041108         0.038427  -3783.719067
+   TF_FX USDJPY ExtremeVol  1120  13210.373778      11.794977  461.254289     0.405935  -5109.096280  4314.111832         0.062500         0.073214  -9451.768635
+Med egen vol-regim per marknad ser det ut som att de tidigare globala overlay-idéerna var missvisande. TF_EQ i ExtremeVol på egen marknadsvol:
+US100
+Total PnL: -8,209
+Sharpe-like: -0.113
+Max DD Abs: -42,931
+Det här är den enda tydliga förloraren.
+US500
+Total PnL: +16,460
+Sharpe-like: +0.262
+Inte fantastisk, men positiv.
+US30
+Total PnL: +34,227
+Sharpe-like: +0.580
+Klart bäst i egen ExtremeVol.
+Alltså ska vi inte skala ner hela TF_EQ, och sannolikt inte heller US500. Det är främst US100 som ser problematisk ut.
+MR_FX i ExtremeVol på egen marknadsvol:
+EURCAD: i princip död / neutral
+EURCHF: bra
+EURUSD: bra
+GBPCHF: okej
+USDCHF: bra
+USDCHF ser inte ut att vara problemet när vi mäter på USDCHF:s egen vol-regim, det var en artefakt från den globala riskregimen. Det kvantitativa beslutet här är att skala ner US100 och
+lämna US500 och US30 orörda i första testet
+MR_FX i egen ExtremeVol:
+EURCAD
+Total PnL: +130
+Sharpe-like: +0.002
+Max DD Abs: -55,085
+I praktiken död kapitalanvändning i stress. Inte direkt katastrof, men dålig effektivitet.
+EURCHF
+Total PnL: +38,359
+Sharpe-like: +0.557
+Bra.
+EURUSD
+Total PnL: +82,454
+Sharpe-like: +0.436
+Bra.
+GBPCHF
+Total PnL: +25,816
+Sharpe-like: +0.175
+Svag men fortfarande positiv.
+USDCHF
+Total PnL: +67,272
+Sharpe-like: +0.702
+Bra.
+Det här betyder att vi inte ska skala ner USDCHF, EURCHF eller EURUSD. Om vi ska skala ner något i MR_FX på egen vol-regim, så är det främst EURCAD. Vi har nu bekräftat något viktigt, att 
+global regim och egen marknadsregim ger olika svar. När vi använde gemensam regim såg USDCHF dålig ut i stress. Men när vi använder USDCHF:s egen vol-regim är USDCHF faktiskt stark. Det 
+betyder att problemet inte var “USDCHF blir dålig när USDCHF är volatil”, problemet var mer “USDCHF råkar prestera svagt i vissa globala risk-off-regimer”. Det är en väldigt viktig 
+skillnad eftersom portföljen volatilitet inte påverkar de fraktala komponenterna, det är istället tvärtom, att de enskilda marknaderna påverkar portföljen volatilitet. Detta innebär att
+enskilda marknaders prestation i olika portföljs regimer är upp till slump. Slutsatsen här är att US100 är enda tydligt negativa market i egen ExtremeVol och EURCAD är den enda som ser ut 
+att ha nästan noll edge i egen ExtremeVol, men ändå stor DD. Vi testar våran baseline STRATEGY_TARGETS = {
+    "TF_EQ": 1.125,
+    "MR_EQ": 0.875,
+    "TF_FX": 2.5,
+    "MR_FX": 8.0,
+} med EXTREMEVOL_MARKET_MULTIPLIERS = {
+    ("TF_EQ", "US100"): 0.50,
+    ("TF_EQ", "US500"): 1.00,
+    ("TF_EQ", "US30"): 1.00,
+
+    ("MR_FX", "USDCHF"): 1.00,
+    ("MR_FX", "EURUSD"): 1.00,
+    ("MR_FX", "EURCHF"): 1.00,
+    ("MR_FX", "GBPCHF"): 1.00,
+    ("MR_FX", "EURCAD"): 0.50,
+}:
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1348700.9058
+CAGR: 0.2654
+Max Drawdown %: -15.0585
+Sharpe (ann.): 1.4760
+Calmar: 1.7623
+Avg Daily Return: 0.0008
+Daily Vol: 0.0082
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 161.49244837442748
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -15.06%
+Max DD% (Closed trades only): -15.62%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0786
+AvgWorstDD: -0.0066
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9232
+P(Pass Verification): 0.8677
+P(Reach 1st payout):  0.8580
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18464, 'mean': 70.98478119584055, 'median': 55.0, 'p05': 10.0, 'p95': 185.0}
+Verification: {'count': 17353, 'mean': 34.69423154497781, 'median': 22.0, 'p05': 4.0, 'p95': 109.0}
+Payout: {'count': 17161, 'mean': 22.38511741739992, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
+Jämför vi med baseline utan vol overlay:
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1436326.8904
+CAGR: 0.2711
+Max Drawdown %: -17.8269
+Sharpe (ann.): 1.4272
+Calmar: 1.5206
+Avg Daily Return: 0.0008
+Daily Vol: 0.0087
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 166.44081272796421
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -17.83%
+Max DD% (Closed trades only): -16.95%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0923
+AvgWorstDD: -0.0070
+P(Breach -5%): 0.0025
+P(Breach -10%): 0.0000
+Count Breach -5%: 10
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9237
+P(Pass Verification): 0.8653
+P(Reach 1st payout):  0.8557
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18474, 'mean': 70.79484681173541, 'median': 55.0, 'p05': 10.0, 'p95': 185.0}
+Verification: {'count': 17306, 'mean': 34.699352825609616, 'median': 22.0, 'p05': 4.0, 'p95': 110.0}
+Payout: {'count': 17113, 'mean': 22.240811079296442, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
+Här har vi en overlay som ser ut att vara värd komplexiteten. Med market-specific egen-vol overlay får vi:
+CAGR: 27.11% → 26.54%
+Max DD: -17.83% → -15.06%
+Sharpe: 1.427 → 1.476
+Calmar: 1.521 → 1.762
+WorstDayDD: -9.23% → -7.86%
+P(Breach -5%): 0.0025 → 0.0020
+Payout: 0.8557 → 0.8580
+Vi tappar väldigt lite CAGR, vi förbättrar drawdown mycket, vi förbättrar Sharpe, vi förbättrar Calmar tydligt och förbättrar FTMO lite. Tidigare overlays var för grova och gav mest lite 
+mindre DD men också för mycket mindre CAGR. Den här overlayn ger istället 2.77 procentenheter lägre max DD för bara 0.57 procentenheter lägre CAGR
