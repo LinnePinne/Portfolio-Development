@@ -1638,100 +1638,30 @@ global regim och egen marknadsregim ger olika svar. När vi använde gemensam re
 betyder att problemet inte var “USDCHF blir dålig när USDCHF är volatil”, problemet var mer “USDCHF råkar prestera svagt i vissa globala risk-off-regimer”. Det är en väldigt viktig 
 skillnad eftersom portföljen volatilitet inte påverkar de fraktala komponenterna, det är istället tvärtom, att de enskilda marknaderna påverkar portföljen volatilitet. Detta innebär att
 enskilda marknaders prestation i olika portföljs regimer är upp till slump. Slutsatsen här är att US100 är enda tydligt negativa market i egen ExtremeVol och EURCAD är den enda som ser ut 
-att ha nästan noll edge i egen ExtremeVol, men ändå stor DD. Vi testar våran baseline STRATEGY_TARGETS = {
+att ha nästan noll edge i egen ExtremeVol, men ändå stor DD. Vi ser också att TF_FX EURJPY och GBPJPY presterar negativt i LowVol, så vi testar att halva ner de två också i den regimenVi testar våran baseline STRATEGY_TARGETS = {
     "TF_EQ": 1.125,
     "MR_EQ": 0.875,
     "TF_FX": 2.5,
     "MR_FX": 8.0,
-} med EXTREMEVOL_MARKET_MULTIPLIERS = {
-    ("TF_EQ", "US100"): 0.50,
-    ("TF_EQ", "US500"): 1.00,
-    ("TF_EQ", "US30"): 1.00,
+}
+med REGIME_MARKET_MULTIPLIERS = {
+    # ExtremeVol overlays
+    ("ExtremeVol", "TF_EQ", "US100"): 0.50,
+    ("ExtremeVol", "TF_EQ", "US500"): 1.00,
+    ("ExtremeVol", "TF_EQ", "US30"): 1.00,
 
-    ("MR_FX", "USDCHF"): 1.00,
-    ("MR_FX", "EURUSD"): 1.00,
-    ("MR_FX", "EURCHF"): 1.00,
-    ("MR_FX", "GBPCHF"): 1.00,
-    ("MR_FX", "EURCAD"): 0.50,
+
+    ("ExtremeVol", "MR_FX", "USDCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURUSD"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "GBPCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURCAD"): 0.00,
+
+    # LowVol overlays för TF_FX
+    ("LowVol", "TF_FX", "EURJPY"): 0.50,
+    ("LowVol", "TF_FX", "GBPJPY"): 0.50,
+    ("LowVol", "TF_FX", "USDJPY"): 1.00,
 }:
---- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
-Equity Start: 50000.0000
-Equity End: 1348700.9058
-CAGR: 0.2654
-Max Drawdown %: -15.0585
-Sharpe (ann.): 1.4760
-Calmar: 1.7623
-Avg Daily Return: 0.0008
-Daily Vol: 0.0082
-
-Sanity: Open positions at end: 2
-Avg gross exposure %: 161.49244837442748
-Max gross exposure %: 1170.9209068614657
-Max DD% (MTM equity): -15.06%
-Max DD% (Closed trades only): -15.62%
---- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
-Days: 3931
-WorstDayDD: -0.0786
-AvgWorstDD: -0.0066
-P(Breach -5%): 0.0020
-P(Breach -10%): 0.0000
-Count Breach -5%: 8
-Count Breach -10%: 0
---- FTMO PIPELINE (DayPath Bootstrap) ---
-Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
-P(Pass Challenge):    0.9232
-P(Pass Verification): 0.8677
-P(Reach 1st payout):  0.8580
---- TIME TO EVENT (days) ---
-Challenge: {'count': 18464, 'mean': 70.98478119584055, 'median': 55.0, 'p05': 10.0, 'p95': 185.0}
-Verification: {'count': 17353, 'mean': 34.69423154497781, 'median': 22.0, 'p05': 4.0, 'p95': 109.0}
-Payout: {'count': 17161, 'mean': 22.38511741739992, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
-
-Jämför vi med baseline utan vol overlay:
---- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
-Equity Start: 50000.0000
-Equity End: 1436326.8904
-CAGR: 0.2711
-Max Drawdown %: -17.8269
-Sharpe (ann.): 1.4272
-Calmar: 1.5206
-Avg Daily Return: 0.0008
-Daily Vol: 0.0087
-
-Sanity: Open positions at end: 2
-Avg gross exposure %: 166.44081272796421
-Max gross exposure %: 1170.9209068614657
-Max DD% (MTM equity): -17.83%
-Max DD% (Closed trades only): -16.95%
---- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
-Days: 3931
-WorstDayDD: -0.0923
-AvgWorstDD: -0.0070
-P(Breach -5%): 0.0025
-P(Breach -10%): 0.0000
-Count Breach -5%: 10
-Count Breach -10%: 0
---- FTMO PIPELINE (DayPath Bootstrap) ---
-Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
-P(Pass Challenge):    0.9237
-P(Pass Verification): 0.8653
-P(Reach 1st payout):  0.8557
---- TIME TO EVENT (days) ---
-Challenge: {'count': 18474, 'mean': 70.79484681173541, 'median': 55.0, 'p05': 10.0, 'p95': 185.0}
-Verification: {'count': 17306, 'mean': 34.699352825609616, 'median': 22.0, 'p05': 4.0, 'p95': 110.0}
-Payout: {'count': 17113, 'mean': 22.240811079296442, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
-Här har vi en overlay som ser ut att vara värd komplexiteten. Med market-specific egen-vol overlay får vi:
-CAGR: 27.11% → 26.54%
-Max DD: -17.83% → -15.06%
-Sharpe: 1.427 → 1.476
-Calmar: 1.521 → 1.762
-WorstDayDD: -9.23% → -7.86%
-P(Breach -5%): 0.0025 → 0.0020
-Payout: 0.8557 → 0.8580
-Vi tappar väldigt lite CAGR, vi förbättrar drawdown mycket, vi förbättrar Sharpe, vi förbättrar Calmar tydligt och förbättrar FTMO lite. Tidigare overlays var för grova och gav mest lite 
-mindre DD men också för mycket mindre CAGR. Den här overlayn ger istället 2.77 procentenheter lägre max DD för bara 0.57 procentenheter lägre CAGR. Vi ser också att TF_FX EURJPY och 
-GBPJPY presterar negativt i LowVol, så vi testar att halva ner de två också i den regimen:
---- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
 Equity Start: 50000.0000
 Equity End: 1393363.7739
 CAGR: 0.2683
@@ -1764,105 +1694,119 @@ P(Reach 1st payout):  0.8582
 Challenge: {'count': 18467, 'mean': 70.47484702442195, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
 Verification: {'count': 17357, 'mean': 34.50262142075243, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
 Payout: {'count': 17165, 'mean': 22.337372560442763, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
-Tidigare bästa:
-Equity End: 1,348,700
-CAGR: 0.2654
-Max DD: -15.06%
-Sharpe: 1.4760
-Calmar: 1.7623
-Med LowVol JPY overlay:
-Equity End: 1,393,364 
-CAGR: 0.2683 
-Max DD: -15.06%
-Sharpe: 1.4911 
-Calmar: 1.7819
-Förbättring i allt. Vi testar:
---- REGIME MARKET MULTIPLIERS ---
-('ExtremeVol', 'TF_EQ', 'US100'): 0.35
-('ExtremeVol', 'TF_EQ', 'US500'): 1.0
-('ExtremeVol', 'TF_EQ', 'US30'): 1.0
-('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
-('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'EURCAD'): 0.35
-('LowVol', 'TF_FX', 'EURJPY'): 0.35
-('LowVol', 'TF_FX', 'GBPJPY'): 0.35
-('LowVol', 'TF_FX', 'USDJPY'): 1.0
---- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
-Equity Start: 50000.0000
-Equity End: 1379349.4286
-CAGR: 0.2674
-Max Drawdown %: -15.3577
-Sharpe (ann.): 1.5078
-Calmar: 1.7412
-Avg Daily Return: 0.0008
-Daily Vol: 0.0081
+Vi ser en förbättring i allt här. Vi kör en grid search med olika kombinationer av nerskalningsfaktorer för dessa marknader och rankar kombinationerna utifrån portfölj och FTMO perspektiv där portfölj rankningen ser ut såhär:
+score = (
+        2.5 * calmar
+        + 1.5 * sharpe
+        + 1.0 * cagr
+        + 1.75 * p_payout
+        + 0.50 * p_verification
+        + 0.25 * p_challenge
+        - 1.25 * abs(max_dd_pct / 100.0)
+        - 1.50 * abs(worst_day_dd)
+        - 8.00 * p_breach_5
+    ) och FTMO ser ut såhär:
+score = (
+        3.0 * p_payout
+        + 1.0 * p_verification
+        + 0.5 * p_challenge
+        - 3.0 * p_breach_5
+        - 1.0 * abs(worst_day_dd)
+    ):
+--- OVERLAY GRID SEARCH: TOP 20 BY PORTFOLIO SCORE ---
+                                        Config  Portfolio Score  FTMO Score     CAGR   Sharpe   Calmar   Max DD %   Equity End  WorstDayDD  P(Breach -5%)  Count Breach -5%  P(Pass Challenge)  P(Pass Verification)  P(Reach 1st payout)  Avg Gross Exposure %  Max Gross Exposure %  EV_TF_EQ_US100  EV_MR_FX_EURCAD  LV_TF_FX_EURJPY  LV_TF_FX_GBPJPY
+US100x0.50_EURCADx0.65_EURJPYx0.35_GBPJPYx0.35         8.927823    3.848512 0.269174 1.491187 1.823817 -14.758803 1.406444e+06   -0.080549       0.002035                 8           0.927000              0.875667             0.865333            161.217849           1170.920907            0.50             0.65             0.35             0.35
+US100x0.50_EURCADx0.65_EURJPYx0.50_GBPJPYx0.35         8.918096    3.848512 0.268790 1.489294 1.821215 -14.758803 1.400499e+06   -0.080549       0.002035                 8           0.927000              0.875667             0.865333            161.274452           1170.920907            0.50             0.65             0.50             0.35
+US100x0.50_EURCADx0.65_EURJPYx0.35_GBPJPYx0.50         8.915072    3.848179 0.268675 1.488757 1.820440 -14.758803 1.398733e+06   -0.080549       0.002035                 8           0.927667              0.875000             0.865333            161.364974           1170.920907            0.50             0.65             0.35             0.50
+US100x0.35_EURCADx0.65_EURJPYx0.35_GBPJPYx0.35         8.910647    3.849385 0.267355 1.499773 1.811498 -14.758803 1.378502e+06   -0.078343       0.002035                 8           0.927000              0.875333             0.865000            160.336470           1170.920907            0.35             0.65             0.35             0.35
+US100x0.50_EURCADx0.65_EURJPYx0.65_GBPJPYx0.35         8.908334    3.848512 0.268405 1.487382 1.818612 -14.758803 1.394573e+06   -0.080549       0.002035                 8           0.927000              0.875667             0.865333            161.331085           1170.920907            0.50             0.65             0.65             0.35
+US100x0.50_EURCADx0.65_EURJPYx0.50_GBPJPYx0.50         8.905348    3.848179 0.268291 1.486864 1.817840 -14.758803 1.392821e+06   -0.080549       0.002035                 8           0.927667              0.875000             0.865333            161.421583           1170.920907            0.50             0.65             0.50             0.50
+US100x0.50_EURCADx0.65_EURJPYx0.35_GBPJPYx0.65         8.902954    3.849346 0.268176 1.486262 1.817056 -14.758803 1.391045e+06   -0.080549       0.002035                 8           0.928000              0.876000             0.865333            161.512114           1170.920907            0.50             0.65             0.35             0.65
+US100x0.35_EURCADx0.65_EURJPYx0.50_GBPJPYx0.35         8.900894    3.849385 0.266972 1.497856 1.808901 -14.758803 1.372676e+06   -0.078343       0.002035                 8           0.927000              0.875333             0.865000            160.393046           1170.920907            0.35             0.65             0.50             0.35
+US100x0.35_EURCADx0.65_EURJPYx0.35_GBPJPYx0.50         8.896531    3.846718 0.266858 1.497313 1.808127 -14.758803 1.370945e+06   -0.078343       0.002035                 8           0.927667              0.874333             0.864333            160.483594           1170.920907            0.35             0.65             0.35             0.50
+US100x0.50_EURCADx0.65_EURJPYx0.65_GBPJPYx0.50         8.895588    3.848179 0.267907 1.484951 1.815237 -14.758803 1.386927e+06   -0.080549       0.002035                 8           0.927667              0.875000             0.865333            161.478221           1170.920907            0.50             0.65             0.65             0.50
+US100x0.50_EURCADx0.65_EURJPYx0.50_GBPJPYx0.65         8.892482    3.848012 0.267792 1.484369 1.814457 -14.758803 1.385165e+06   -0.080549       0.002035                 8           0.928000              0.875667             0.865000            161.568729           1170.920907            0.50             0.65             0.50             0.65
+US100x0.35_EURCADx0.65_EURJPYx0.65_GBPJPYx0.35         8.891271    3.849718 0.266588 1.495919 1.806301 -14.758803 1.366868e+06   -0.078343       0.002035                 8           0.927000              0.875667             0.865000            160.449651           1170.920907            0.35             0.65             0.65             0.35
+US100x0.35_EURCADx0.65_EURJPYx0.50_GBPJPYx0.50         8.886780    3.846718 0.266475 1.495396 1.805530 -14.758803 1.365150e+06   -0.078343       0.002035                 8           0.927667              0.874333             0.864333            160.540176           1170.920907            0.35             0.65             0.50             0.50
+US100x0.35_EURCADx0.65_EURJPYx0.35_GBPJPYx0.65         8.884128    3.847385 0.266359 1.494786 1.804748 -14.758803 1.363410e+06   -0.078343       0.002035                 8           0.927667              0.875000             0.864333            160.630733           1170.920907            0.35             0.65             0.35             0.65
+US100x0.50_EURCADx0.65_EURJPYx0.65_GBPJPYx0.65         8.882557    3.847679 0.267408 1.482456 1.811855 -14.758803 1.379304e+06   -0.080549       0.002035                 8           0.928000              0.875333             0.865000            161.625373           1170.920907            0.50             0.65             0.65             0.65
+US100x0.35_EURCADx0.65_EURJPYx0.65_GBPJPYx0.50         8.876993    3.846718 0.266091 1.493459 1.802931 -14.758803 1.359374e+06   -0.078343       0.002035                 8           0.927667              0.874333             0.864333            160.596786           1170.920907            0.35             0.65             0.65             0.50
+US100x0.35_EURCADx0.65_EURJPYx0.50_GBPJPYx0.65         8.874379    3.847385 0.265976 1.492868 1.802152 -14.758803 1.357647e+06   -0.078343       0.002035                 8           0.927667              0.875000             0.864333            160.687320           1170.920907            0.35             0.65             0.50             0.65
+US100x0.65_EURCADx0.50_EURJPYx0.35_GBPJPYx0.35         8.866320    3.864608 0.271005 1.485814 1.799681 -15.058497 1.435121e+06   -0.080787       0.002035                 8           0.929667              0.878667             0.869333            161.487632           1170.920907            0.65             0.50             0.35             0.35
+US100x0.35_EURCADx0.65_EURJPYx0.65_GBPJPYx0.65         8.864594    3.847385 0.265593 1.490931 1.799555 -14.758803 1.351903e+06   -0.078343       0.002035                 8           0.927667              0.875000             0.864333            160.743937           1170.920907            0.35             0.65             0.65             0.65
+US100x0.65_EURCADx0.50_EURJPYx0.50_GBPJPYx0.35         8.856741    3.864608 0.270620 1.483940 1.797128 -15.058497 1.429056e+06   -0.080787       0.002035                 8           0.929667              0.878667             0.869333            161.544263           1170.920907            0.65             0.50             0.50             0.35
 
-Sanity: Open positions at end: 2
-Avg gross exposure %: 159.11970798934593
-Max gross exposure %: 1170.9209068614655
-Max DD% (MTM equity): -15.36%
-Max DD% (Closed trades only): -15.37%
---- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
-Days: 3931
-WorstDayDD: -0.0744
-AvgWorstDD: -0.0065
-P(Breach -5%): 0.0018
-P(Breach -10%): 0.0000
-Count Breach -5%: 7
-Count Breach -10%: 0
---- FTMO PIPELINE (DayPath Bootstrap) ---
-Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
-P(Pass Challenge):    0.9228
-P(Pass Verification): 0.8677
-P(Reach 1st payout):  0.8581
---- TIME TO EVENT (days) ---
-Challenge: {'count': 18457, 'mean': 70.39199219808202, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
-Verification: {'count': 17354, 'mean': 34.52702546963236, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
-Payout: {'count': 17163, 'mean': 22.3155042824681, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
-Vi testar också:
---- REGIME MARKET MULTIPLIERS ---
-('ExtremeVol', 'TF_EQ', 'US100'): 0.2
-('ExtremeVol', 'TF_EQ', 'US500'): 1.0
-('ExtremeVol', 'TF_EQ', 'US30'): 1.0
-('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
-('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
-('ExtremeVol', 'MR_FX', 'EURCAD'): 0.2
-('LowVol', 'TF_FX', 'EURJPY'): 0.2
-('LowVol', 'TF_FX', 'GBPJPY'): 0.2
-('LowVol', 'TF_FX', 'USDJPY'): 1.0
---- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
-Equity Start: 50000.0000
-Equity End: 1364844.6180
-CAGR: 0.2665
-Max Drawdown %: -15.6563
-Sharpe (ann.): 1.5229
-Calmar: 1.7019
-Avg Daily Return: 0.0008
-Daily Vol: 0.0080
+--- OVERLAY GRID SEARCH: TOP 20 BY FTMO SCORE ---
+                                        Config  Portfolio Score  FTMO Score     CAGR   Sharpe   Calmar   Max DD %   Equity End  WorstDayDD  P(Breach -5%)  Count Breach -5%  P(Pass Challenge)  P(Pass Verification)  P(Reach 1st payout)  Avg Gross Exposure %  Max Gross Exposure %  EV_TF_EQ_US100  EV_MR_FX_EURCAD  LV_TF_FX_EURJPY  LV_TF_FX_GBPJPY
+US100x0.65_EURCADx0.50_EURJPYx0.35_GBPJPYx0.35         8.866320    3.864608 0.271005 1.485814 1.799681 -15.058497 1.435121e+06   -0.080787       0.002035                 8           0.929667              0.878667             0.869333            161.487632           1170.920907            0.65             0.50             0.35             0.35
+US100x0.65_EURCADx0.50_EURJPYx0.50_GBPJPYx0.35         8.856741    3.864608 0.270620 1.483940 1.797128 -15.058497 1.429056e+06   -0.080787       0.002035                 8           0.929667              0.878667             0.869333            161.544263           1170.920907            0.65             0.50             0.50             0.35
+US100x0.65_EURCADx0.50_EURJPYx0.65_GBPJPYx0.35         8.847128    3.864608 0.270236 1.482048 1.794572 -15.058497 1.423009e+06   -0.080787       0.002035                 8           0.929667              0.878667             0.869333            161.600922           1170.920907            0.65             0.50             0.65             0.35
+US100x0.50_EURCADx0.35_EURJPYx0.35_GBPJPYx0.50         8.755393    3.861340 0.268732 1.496534 1.749821 -15.357671 1.399607e+06   -0.076651       0.001781                 7           0.928000              0.877333             0.867333            160.148145           1170.920907            0.50             0.35             0.35             0.50
+US100x0.50_EURCADx0.35_EURJPYx0.50_GBPJPYx0.50         8.745905    3.861340 0.268348 1.494629 1.747322 -15.357671 1.393692e+06   -0.076651       0.001781                 7           0.928000              0.877333             0.867333            160.204754           1170.920907            0.50             0.35             0.50             0.50
+US100x0.35_EURCADx0.35_EURJPYx0.35_GBPJPYx0.50         8.738946    3.860879 0.266913 1.505309 1.737982 -15.357671 1.371787e+06   -0.074446       0.001781                 7           0.927333              0.877000             0.866667            159.266830           1170.920907            0.35             0.35             0.35             0.50
+US100x0.35_EURCADx0.50_EURJPYx0.65_GBPJPYx0.35         8.812881    3.860834 0.266623 1.500269 1.770583 -15.058497 1.367393e+06   -0.076394       0.002035                 8           0.928000              0.877333             0.867333            159.841037           1170.920907            0.35             0.50             0.65             0.35
+US100x0.50_EURCADx0.35_EURJPYx0.65_GBPJPYx0.50         8.735797    3.860340 0.267964 1.492705 1.744821 -15.357671 1.387794e+06   -0.076651       0.001781                 7           0.928000              0.877333             0.867000            160.261391           1170.920907            0.50             0.35             0.65             0.50
+US100x0.35_EURCADx0.35_EURJPYx0.50_GBPJPYx0.50         8.728680    3.859546 0.266530 1.503380 1.735486 -15.357671 1.365989e+06   -0.074446       0.001781                 7           0.927333              0.876667             0.866333            159.323411           1170.920907            0.35             0.35             0.50             0.50
+US100x0.35_EURCADx0.50_EURJPYx0.50_GBPJPYx0.35         8.821801    3.859500 0.267007 1.502213 1.773131 -15.058497 1.373204e+06   -0.076394       0.002035                 8           0.928000              0.877000             0.867000            159.784432           1170.920907            0.35             0.50             0.50             0.35
+US100x0.35_EURCADx0.50_EURJPYx0.35_GBPJPYx0.35         8.831434    3.859500 0.267390 1.504136 1.775677 -15.058497 1.379032e+06   -0.076394       0.002035                 8           0.928000              0.877000             0.867000            159.727856           1170.920907            0.35             0.50             0.35             0.35
+US100x0.50_EURCADx0.50_EURJPYx0.65_GBPJPYx0.35         8.828744    3.858961 0.268441 1.491612 1.782652 -15.058497 1.395117e+06   -0.078600       0.002035                 8           0.928667              0.877333             0.867333            160.722438           1170.920907            0.50             0.50             0.65             0.35
+US100x0.50_EURCADx0.35_EURJPYx0.35_GBPJPYx0.35         8.765754    3.857840 0.269230 1.498978 1.753067 -15.357671 1.407323e+06   -0.076651       0.001781                 7           0.927667              0.876000             0.866667            160.001023           1170.920907            0.50             0.35             0.35             0.35
+US100x0.50_EURCADx0.35_EURJPYx0.50_GBPJPYx0.35         8.756264    3.857840 0.268846 1.497074 1.750566 -15.357671 1.401375e+06   -0.076651       0.001781                 7           0.927667              0.876000             0.866667            160.057625           1170.920907            0.50             0.35             0.50             0.35
+US100x0.50_EURCADx0.50_EURJPYx0.50_GBPJPYx0.65         8.812749    3.857795 0.267827 1.488589 1.778580 -15.058497 1.385705e+06   -0.078600       0.002035                 8           0.927667              0.877667             0.867000            160.960080           1170.920907            0.50             0.50             0.50             0.65
+US100x0.50_EURCADx0.50_EURJPYx0.65_GBPJPYx0.65         8.803111    3.857795 0.267443 1.486669 1.776030 -15.058497 1.379842e+06   -0.078600       0.002035                 8           0.927667              0.877667             0.867000            161.016724           1170.920907            0.50             0.50             0.65             0.65
+US100x0.50_EURCADx0.50_EURJPYx0.35_GBPJPYx0.65         8.822352    3.857795 0.268211 1.490489 1.781128 -15.058497 1.391587e+06   -0.078600       0.002035                 8           0.927667              0.877667             0.867000            160.903465           1170.920907            0.50             0.50             0.35             0.65
+US100x0.50_EURCADx0.50_EURJPYx0.35_GBPJPYx0.35         8.847243    3.857628 0.269209 1.495430 1.787754 -15.058497 1.406992e+06   -0.078600       0.002035                 8           0.928667              0.877000             0.867000            160.609203           1170.920907            0.50             0.50             0.35             0.35
+US100x0.50_EURCADx0.50_EURJPYx0.50_GBPJPYx0.35         8.837636    3.857628 0.268825 1.493531 1.785204 -15.058497 1.401045e+06   -0.078600       0.002035                 8           0.928667              0.877000             0.867000            160.665806           1170.920907            0.50             0.50             0.50             0.35
+US100x0.65_EURCADx0.50_EURJPYx0.65_GBPJPYx0.50         8.830822    3.857608 0.269737 1.479641 1.791259 -15.058497 1.415206e+06   -0.080787       0.002035                 8           0.928333              0.877333             0.867667            161.748058           1170.920907            0.65             0.50             0.65             0.50
+Toppraden på Portfolio Score är:
+("ExtremeVol", "TF_EQ", "US100"): 0.50
+("ExtremeVol", "MR_FX", "EURCAD"): 0.65
+("LowVol", "TF_FX", "EURJPY"): 0.35
+("LowVol", "TF_FX", "GBPJPY"): 0.35
+Med:
+CAGR: 26.92%
+Sharpe: 1.491
+Calmar: 1.824
+Max DD: -14.76%
+Payout: 86.53%
+Det här är starkt. Det viktigaste den här kandidaten förbättrar:
+DD
+Calmar
+payout
+utan att ge upp mycket CAGR.
+Toppraden på FTMO Score är:
+("ExtremeVol", "TF_EQ", "US100"): 0.65
+("ExtremeVol", "MR_FX", "EURCAD"): 0.50
+("LowVol", "TF_FX", "EURJPY"): 0.35
+("LowVol", "TF_FX", "GBPJPY"): 0.35
+Med:
+CAGR: 27.10%
+Sharpe: 1.486
+Calmar: 1.800
+Max DD: -15.06%
+payout: 86.93%
+Challenge: 92.97%
+Verification: 87.87%
+Den här är lite starkare för FTMO, men lite svagare än portföljvinnaren på DD/Calmar. De bästa raderna för LowVolhar nästan alltid EURJPY = 0.35 och GBPJPY = 0.35. Det betyder att våra LowVol-overlays i TF_FX ska vara ganska aggressiva, 0.50 och 0.65 verkar sämre.
 
-Sanity: Open positions at end: 2
-Avg gross exposure %: 157.42417440596884
-Max gross exposure %: 1170.9209068614655
-Max DD% (MTM equity): -15.66%
-Max DD% (Closed trades only): -15.12%
---- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
-Days: 3931
-WorstDayDD: -0.0703
-AvgWorstDD: -0.0064
-P(Breach -5%): 0.0018
-P(Breach -10%): 0.0000
-Count Breach -5%: 7
-Count Breach -10%: 0
---- FTMO PIPELINE (DayPath Bootstrap) ---
-Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
-P(Pass Challenge):    0.9218
-P(Pass Verification): 0.8672
-P(Reach 1st payout):  0.8579
---- TIME TO EVENT (days) ---
-Challenge: {'count': 18437, 'mean': 70.41584856538482, 'median': 55.0, 'p05': 10.0, 'p95': 183.20000000000073}
-Verification: {'count': 17344, 'mean': 34.414840867158674, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
-Payout: {'count': 17158, 'mean': 22.3507401795081, 'median': 15.0, 'p05': 15.0, 'p95': 59.0}
+B. ExtremeVol TF_EQ US100
+
+Här verkar optimum ligga mellan:
+
+0.50 för bäst totalportfölj
+0.65 för bäst FTMO
+
+Alltså: ni behöver inte ner till 0.35.
+0.35 dyker upp högt, men 0.50 ser mer robust ut.
+
+C. ExtremeVol MR_FX EURCAD
+
+Här verkar optimum ligga mellan:
+
+0.50
+0.65
+
+Det ser ut som att:
+
+0.65 hjälper totalportföljen mest
+0.50 hjälper FTMO lite mer
