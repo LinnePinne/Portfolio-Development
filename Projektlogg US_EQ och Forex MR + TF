@@ -1787,26 +1787,179 @@ Max DD: -15.06%
 payout: 86.93%
 Challenge: 92.97%
 Verification: 87.87%
-Den här är lite starkare för FTMO, men lite svagare än portföljvinnaren på DD/Calmar. De bästa raderna för LowVolhar nästan alltid EURJPY = 0.35 och GBPJPY = 0.35. Det betyder att våra LowVol-overlays i TF_FX ska vara ganska aggressiva, 0.50 och 0.65 verkar sämre.
+Den här är lite starkare för FTMO, men lite svagare än portföljvinnaren på DD/Calmar. De bästa raderna för LowVol TF_FX har nästan alltid EURJPY = 0.35 och GBPJPY = 0.35. Det betyder att våra LowVol-overlays i TF_FX ska vara ganska aggressiva, 0.50 och 0.65 verkar sämre.
+För ExtremeVol TF_EQ US100 verkar optimum ligga mellan 0.50 för bäst totalportfölj och 0.65 för bäst FTMO. Alltså behöver vi inte ner till 0.35. 0.35 dyker upp högt, men 0.50 ser mer robust ut.
+För ExtremeVol MR_FX EURCAD verkar optimum ligga mellan 0.50 och 0.65. Det ser ut som att 0.65 hjälper totalportföljen mest och 0.50 hjälper FTMO lite mer. Vi kör full backtest och bootrapp med de två topp kandidaterna. Vi testar portfölj optimum först:
+--- REGIME MARKET MULTIPLIERS ---
+('ExtremeVol', 'TF_EQ', 'US100'): 0.5
+('ExtremeVol', 'TF_EQ', 'US500'): 1.0
+('ExtremeVol', 'TF_EQ', 'US30'): 1.0
+('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCAD'): 0.65
+('LowVol', 'TF_FX', 'EURJPY'): 0.35
+('LowVol', 'TF_FX', 'GBPJPY'): 0.35
+('LowVol', 'TF_FX', 'USDJPY'): 1.0
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  531967.585782     104.021820  3313.483771  37222.207235 -35913.239724         0.307978            0.392178           0.031393
+MR_FX  358901.862324      70.180262  2443.172470  41720.130413 -67152.979311         0.450137            0.264590           0.028725
+MR_EQ  257319.503771      50.316680  1985.053067  24889.859735 -31437.928850         0.115370            0.189702           0.025348
+TF_FX  208254.825447      40.722492  1465.446864  28733.752091 -30270.410607         0.073133            0.153530           0.027788
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ     TF_FX
+MR_EQ  1.000000  0.019335  0.091452 -0.016452
+MR_FX  0.019335  1.000000 -0.001923 -0.107245
+TF_EQ  0.091452 -0.001923  1.000000 -0.041139
+TF_FX -0.016452 -0.107245 -0.041139  1.000000
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1406443.7773
+CAGR: 0.2692
+Max Drawdown %: -14.7588
+Sharpe (ann.): 1.4912
+Calmar: 1.8238
+Avg Daily Return: 0.0008
+Daily Vol: 0.0083
 
-B. ExtremeVol TF_EQ US100
+Sanity: Open positions at end: 2
+Avg gross exposure %: 161.21784906996317
+Max gross exposure %: 1170.9209068614655
+Max DD% (MTM equity): -14.76%
+Max DD% (Closed trades only): -15.65%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0805
+AvgWorstDD: -0.0066
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9238
+P(Pass Verification): 0.8676
+P(Reach 1st payout):  0.8578
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18476, 'mean': 70.3269647109764, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
+Verification: {'count': 17351, 'mean': 34.37824909227134, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
+Payout: {'count': 17156, 'mean': 22.324726043366752, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             17156
+Challenge        1524
+Verification     1125
+Funded            195
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    2844
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2020-06-11    5.586052e+05      -0.080549
+2013-06-20    7.870945e+04      -0.063884
+2025-04-03    1.295951e+06      -0.060720
+2024-04-29    1.153820e+06      -0.058351
+2020-03-20    4.923073e+05      -0.056643
+2021-11-26    7.751993e+05      -0.056381
+2020-09-04    6.125758e+05      -0.054463
+2016-06-24    1.956690e+05      -0.052596
+2015-01-26    1.299276e+05      -0.049184
+2015-06-23    1.469952e+05      -0.049030
+Och FTMO optimum:
+--- REGIME MARKET MULTIPLIERS ---
+('ExtremeVol', 'TF_EQ', 'US100'): 0.65
+('ExtremeVol', 'TF_EQ', 'US500'): 1.0
+('ExtremeVol', 'TF_EQ', 'US30'): 1.0
+('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCAD'): 0.5
+('LowVol', 'TF_FX', 'EURJPY'): 0.35
+('LowVol', 'TF_FX', 'GBPJPY'): 0.35
+('LowVol', 'TF_FX', 'USDJPY'): 1.0
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  546336.583190     106.831557  3491.549283  40243.145280 -39289.427670         0.307196            0.394432           0.030597
+MR_FX  364528.784338      71.280560  2471.744580  42753.601357 -68248.088088         0.450332            0.263175           0.028838
+MR_EQ  262562.364893      51.341878  2019.452434  25090.679593 -31691.580759         0.115370            0.189559           0.025424
+TF_FX  211693.493468      41.394895  1493.570408  29257.865874 -31020.254615         0.073133            0.152834           0.027715
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ     TF_FX
+MR_EQ  1.000000  0.020148  0.090512 -0.016658
+MR_FX  0.020148  1.000000 -0.004259 -0.108126
+TF_EQ  0.090512 -0.004259  1.000000 -0.039661
+TF_FX -0.016658 -0.108126 -0.039661  1.000000
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1435121.2259
+CAGR: 0.2710
+Max Drawdown %: -15.0585
+Sharpe (ann.): 1.4858
+Calmar: 1.7997
+Avg Daily Return: 0.0008
+Daily Vol: 0.0083
 
-Här verkar optimum ligga mellan:
+Sanity: Open positions at end: 2
+Avg gross exposure %: 161.4876323154944
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -15.06%
+Max DD% (Closed trades only): -15.83%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0808
+AvgWorstDD: -0.0067
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
 
-0.50 för bäst totalportfölj
-0.65 för bäst FTMO
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9240
+P(Pass Verification): 0.8690
+P(Reach 1st payout):  0.8592
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18480, 'mean': 70.29069264069264, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
+Verification: {'count': 17379, 'mean': 34.338569537948096, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
+Payout: {'count': 17185, 'mean': 22.28379400640093, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
 
-Alltså: ni behöver inte ner till 0.35.
-0.35 dyker upp högt, men 0.50 ser mer robust ut.
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 2.00, Funded factor: 1.00
+P(Pass Challenge):    0.9129
+P(Pass Verification): 0.8525
+P(Reach 1st payout):  0.8430
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18257, 'mean': 50.6607876430958, 'median': 40.0, 'p05': 8.0, 'p95': 131.0}
+Verification: {'count': 17049, 'mean': 23.72889905566309, 'median': 14.0, 'p05': 4.0, 'p95': 75.59999999999854}
+Payout: {'count': 16860, 'mean': 22.404567022538554, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
 
-C. ExtremeVol MR_FX EURCAD
-
-Här verkar optimum ligga mellan:
-
-0.50
-0.65
-
-Det ser ut som att:
-
-0.65 hjälper totalportföljen mest
-0.50 hjälper FTMO lite mer
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             17185
+Challenge        1520
+Verification     1101
+Funded            194
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    2815
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2020-06-11    5.687117e+05      -0.080787
+2013-06-20    7.867241e+04      -0.063884
+2025-04-03    1.317085e+06      -0.060720
+2024-04-29    1.174866e+06      -0.058351
+2020-03-20    4.946850e+05      -0.056786
+2020-09-04    6.249806e+05      -0.056332
+2016-06-24    1.969997e+05      -0.053384
+2021-11-26    7.957204e+05      -0.052843
+2015-01-26    1.304555e+05      -0.049181
+2022-09-22    8.548244e+05      -0.048407
