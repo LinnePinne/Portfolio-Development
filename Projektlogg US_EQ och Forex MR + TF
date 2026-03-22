@@ -1686,6 +1686,7 @@ P(Reach 1st payout):  0.8580
 Challenge: {'count': 18464, 'mean': 70.98478119584055, 'median': 55.0, 'p05': 10.0, 'p95': 185.0}
 Verification: {'count': 17353, 'mean': 34.69423154497781, 'median': 22.0, 'p05': 4.0, 'p95': 109.0}
 Payout: {'count': 17161, 'mean': 22.38511741739992, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
+
 Jämför vi med baseline utan vol overlay:
 --- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
 Equity Start: 50000.0000
@@ -1728,4 +1729,140 @@ WorstDayDD: -9.23% → -7.86%
 P(Breach -5%): 0.0025 → 0.0020
 Payout: 0.8557 → 0.8580
 Vi tappar väldigt lite CAGR, vi förbättrar drawdown mycket, vi förbättrar Sharpe, vi förbättrar Calmar tydligt och förbättrar FTMO lite. Tidigare overlays var för grova och gav mest lite 
-mindre DD men också för mycket mindre CAGR. Den här overlayn ger istället 2.77 procentenheter lägre max DD för bara 0.57 procentenheter lägre CAGR
+mindre DD men också för mycket mindre CAGR. Den här overlayn ger istället 2.77 procentenheter lägre max DD för bara 0.57 procentenheter lägre CAGR. Vi ser också att TF_FX EURJPY och 
+GBPJPY presterar negativt i LowVol, så vi testar att halva ner de två också i den regimen:
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1393363.7739
+CAGR: 0.2683
+Max Drawdown %: -15.0585
+Sharpe (ann.): 1.4911
+Calmar: 1.7819
+Avg Daily Return: 0.0008
+Daily Vol: 0.0082
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 160.81293529592625
+Max gross exposure %: 1170.9209068614657
+Max DD% (MTM equity): -15.06%
+Max DD% (Closed trades only): -15.62%
+
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0786
+AvgWorstDD: -0.0066
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9234
+P(Pass Verification): 0.8679
+P(Reach 1st payout):  0.8582
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18467, 'mean': 70.47484702442195, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
+Verification: {'count': 17357, 'mean': 34.50262142075243, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
+Payout: {'count': 17165, 'mean': 22.337372560442763, 'median': 15.0, 'p05': 15.0, 'p95': 57.0}
+Tidigare bästa:
+Equity End: 1,348,700
+CAGR: 0.2654
+Max DD: -15.06%
+Sharpe: 1.4760
+Calmar: 1.7623
+Med LowVol JPY overlay:
+Equity End: 1,393,364 
+CAGR: 0.2683 
+Max DD: -15.06%
+Sharpe: 1.4911 
+Calmar: 1.7819
+Förbättring i allt. Vi testar:
+--- REGIME MARKET MULTIPLIERS ---
+('ExtremeVol', 'TF_EQ', 'US100'): 0.35
+('ExtremeVol', 'TF_EQ', 'US500'): 1.0
+('ExtremeVol', 'TF_EQ', 'US30'): 1.0
+('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCAD'): 0.35
+('LowVol', 'TF_FX', 'EURJPY'): 0.35
+('LowVol', 'TF_FX', 'GBPJPY'): 0.35
+('LowVol', 'TF_FX', 'USDJPY'): 1.0
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1379349.4286
+CAGR: 0.2674
+Max Drawdown %: -15.3577
+Sharpe (ann.): 1.5078
+Calmar: 1.7412
+Avg Daily Return: 0.0008
+Daily Vol: 0.0081
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 159.11970798934593
+Max gross exposure %: 1170.9209068614655
+Max DD% (MTM equity): -15.36%
+Max DD% (Closed trades only): -15.37%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0744
+AvgWorstDD: -0.0065
+P(Breach -5%): 0.0018
+P(Breach -10%): 0.0000
+Count Breach -5%: 7
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9228
+P(Pass Verification): 0.8677
+P(Reach 1st payout):  0.8581
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18457, 'mean': 70.39199219808202, 'median': 55.0, 'p05': 10.0, 'p95': 184.0}
+Verification: {'count': 17354, 'mean': 34.52702546963236, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
+Payout: {'count': 17163, 'mean': 22.3155042824681, 'median': 15.0, 'p05': 15.0, 'p95': 58.0}
+Vi testar också:
+--- REGIME MARKET MULTIPLIERS ---
+('ExtremeVol', 'TF_EQ', 'US100'): 0.2
+('ExtremeVol', 'TF_EQ', 'US500'): 1.0
+('ExtremeVol', 'TF_EQ', 'US30'): 1.0
+('ExtremeVol', 'MR_FX', 'USDCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURUSD'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'GBPCHF'): 1.0
+('ExtremeVol', 'MR_FX', 'EURCAD'): 0.2
+('LowVol', 'TF_FX', 'EURJPY'): 0.2
+('LowVol', 'TF_FX', 'GBPJPY'): 0.2
+('LowVol', 'TF_FX', 'USDJPY'): 1.0
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 1364844.6180
+CAGR: 0.2665
+Max Drawdown %: -15.6563
+Sharpe (ann.): 1.5229
+Calmar: 1.7019
+Avg Daily Return: 0.0008
+Daily Vol: 0.0080
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 157.42417440596884
+Max gross exposure %: 1170.9209068614655
+Max DD% (MTM equity): -15.66%
+Max DD% (Closed trades only): -15.12%
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0703
+AvgWorstDD: -0.0064
+P(Breach -5%): 0.0018
+P(Breach -10%): 0.0000
+Count Breach -5%: 7
+Count Breach -10%: 0
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.50, Funded factor: 1.00
+P(Pass Challenge):    0.9218
+P(Pass Verification): 0.8672
+P(Reach 1st payout):  0.8579
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18437, 'mean': 70.41584856538482, 'median': 55.0, 'p05': 10.0, 'p95': 183.20000000000073}
+Verification: {'count': 17344, 'mean': 34.414840867158674, 'median': 22.0, 'p05': 4.0, 'p95': 107.0}
+Payout: {'count': 17158, 'mean': 22.3507401795081, 'median': 15.0, 'p05': 15.0, 'p95': 59.0}
