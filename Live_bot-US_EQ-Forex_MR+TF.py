@@ -8,7 +8,7 @@ import pandas as pd
 import ta
 import MetaTrader5 as mt5
 
-from MT5exec_US-Equities_Forex.py import (
+from MT5exec_US-Equities_Forex import (
     ExecConfig,
     ensure_initialized,
     ensure_symbol,
