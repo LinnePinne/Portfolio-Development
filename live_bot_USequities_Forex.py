@@ -3,6 +3,9 @@ import time
 from datetime import datetime, date
 from typing import Optional, Tuple
 
+from datetime import timezone, timedelta
+from zoneinfo import ZoneInfo
+
 import numpy as np
 import pandas as pd
 import ta
@@ -19,6 +22,24 @@ from MT5exec_USequities_Forex import (
     open_short_by_notional,
 )
 
+BROKER_TZ = timezone(timedelta(hours=3))   # fast UTC+2 året runt
+LOCAL_TZ = ZoneInfo("Europe/Stockholm")
+
+def broker_ts_to_stockholm(ts: pd.Timestamp) -> pd.Timestamp:
+    """
+    Tolkar naiv MT5-timestamp som broker time (fast UTC+2)
+    och konverterar till Europe/Stockholm.
+    """
+    if ts.tzinfo is None:
+        ts = ts.tz_localize(BROKER_TZ)
+    else:
+        ts = ts.tz_convert(BROKER_TZ)
+
+    return ts.tz_convert(LOCAL_TZ)
+
+def log_bar_times(label: str, ts: pd.Timestamp):
+    st = broker_ts_to_stockholm(ts)
+    print(f"[{now_str()}] {label} broker_ts={ts} stockholm_ts={st}")
 
 # ==========================
 # CONFIG
@@ -266,12 +287,19 @@ def clamp_time_series_index_unique(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def in_session(ts: pd.Timestamp, session_start: str, session_end: str) -> bool:
+    """
+    Sessionerna definieras i Stockholm-tid.
+    MT5-barens timestamp tolkas först som broker time (fast UTC+2),
+    och konverteras sedan till Stockholm-tid.
+    """
     start_t = pd.to_datetime(session_start).time()
     end_t = pd.to_datetime(session_end).time()
-    t = ts.time()
+    local_ts = broker_ts_to_stockholm(ts)
+    t = local_ts.time()
 
     if start_t < end_t:
         return (t >= start_t) and (t < end_t)
+
     return (t >= start_t) or (t < end_t)
 
 
@@ -309,27 +337,49 @@ def ATR(df_in: pd.DataFrame, period: int = 14, method: str = "wilder") -> pd.Ser
 
 
 def asia_range(df_in: pd.DataFrame) -> pd.DataFrame:
+    """
+    Bygger Asia range på Stockholm-tid, även om df.index är broker/MT5-tid.
+    Behåller originalindex i output.
+    """
     data = df_in.copy()
 
-    session = data.between_time("00:00", "07:00")
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise ValueError("DataFrame måste ha DateTimeIndex")
+
+    # Konvertera varje broker-ts till Stockholm-ts
+    stockholm_index = pd.DatetimeIndex([broker_ts_to_stockholm(ts) for ts in data.index])
+
+    # Temporary helper frame with Stockholm index for session slicing
+    tmp = data.copy()
+    tmp["stockholm_ts"] = stockholm_index
+    tmp = tmp.set_index("stockholm_ts")
+
+    # Asia session in Stockholm time
+    session = tmp.between_time("00:00", "07:00")
+
+    # Group by Stockholm calendar day
     daily_range = session.groupby(session.index.date).agg(
         asia_high=("high", "max"),
         asia_low=("low", "min")
     )
 
-    data["date"] = data.index.date
+    # Map back to original dataframe via Stockholm calendar date
+    data["stockholm_date"] = stockholm_index.date
     data = data.merge(
         daily_range,
-        left_on="date",
+        left_on="stockholm_date",
         right_index=True,
         how="left"
     )
 
     data["asia_range"] = data["asia_high"] - data["asia_low"]
-    data["asia_mid"] = (data["asia_high"] + data["asia_low"]) / 2
+    data["asia_mid"] = (data["asia_high"] + data["asia_low"]) / 2.0
 
-    data.loc[data.index.hour < 8, ["asia_high", "asia_low", "asia_range", "asia_mid"]] = np.nan
-    data.drop(columns="date", inplace=True)
+    # For bars before 08:00 Stockholm, hide same-day Asia values
+    before_8 = pd.Index(stockholm_index.hour) < 8
+    data.loc[before_8, ["asia_high", "asia_low", "asia_range", "asia_mid"]] = np.nan
+
+    data.drop(columns="stockholm_date", inplace=True)
 
     return data
 
@@ -344,9 +394,12 @@ def compute_session_anchored_vwap_and_std(data: pd.DataFrame, vol_col: str, rese
     df_v["vol"] = vol
     df_v["tp_vol"] = df_v["tp"] * df_v["vol"]
 
+    stockholm_index = pd.DatetimeIndex([broker_ts_to_stockholm(ts) for ts in df_v.index])
+
     rt = pd.to_datetime(reset_time).time()
-    session_date = df_v.index.floor("D")
-    session_date = session_date.where(df_v.index.time >= rt, session_date - pd.Timedelta(days=1))
+
+    session_date = stockholm_index.floor("D")
+    session_date = session_date.where(stockholm_index.time >= rt, session_date - pd.Timedelta(days=1))
     df_v["session_date"] = session_date
 
     g = df_v.groupby("session_date", sort=False)
@@ -820,6 +873,9 @@ def run_tf_fx(cfg, state, allow_entries):
 
         prev = last_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
+
+        # DEBUG
+        #log_bar_times(name, prev.name)
 
         if processed.get(name) == bar_id:
             continue
