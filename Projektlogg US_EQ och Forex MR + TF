@@ -1963,3 +1963,105 @@ date
 2021-11-26    7.957204e+05      -0.052843
 2015-01-26    1.304555e+05      -0.049181
 2022-09-22    8.548244e+05      -0.048407
+Skillnaden är egentligen väldigt liten, kandidat B förbättrar ungefär:
+CAGR med 0.18 procentenheter
+payout med 0.14 procentenheter
+Kandidat A förbättrar:
+DD med 0.30 procentenheter
+Sharpe lite
+Calmar lite mer
+Så det här är inte två helt olika världar. Det är två väldigt närliggande optimum. Kandidat A verkar som det bättre valet även för FTMO challenges eftersom den ger 
+lägst drawdown
+bäst Sharpe
+bäst Calmar
+nästan samma CAGR
+nästan samma FTMO
+bättre “risk-adjusted production profile"
+Skillnaden i FTMO är så liten att den inte väger upp den lite sämre riskprofilen. Jämfört med vår ursprungliga baseline utan overlay har båda kandidaterna blivit klart bättre:
+Från baseline:
+CAGR: 27.11%
+Max DD: -17.83%
+Sharpe: 1.427
+Calmar: 1.521
+Payout: 85.57%
+Till Kandidat A:
+CAGR: 26.92%
+Max DD: -14.76%
+Sharpe: 1.491
+Calmar: 1.824
+Payout: 85.78%
+Det här är ett riktigt bra utfall. Vi har i princip behållit avkastningen men kapat drawdown rejält. Vi fortsätter med portfölj optimum eller kandidat A, vi testar att öka EVAL_EXPOSURE_FACTOR till 2.0:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 2.00, Funded factor: 1.00
+P(Pass Challenge):    0.9119
+P(Pass Verification): 0.8501
+P(Reach 1st payout):  0.8405
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18238, 'mean': 50.610044961070294, 'median': 40.0, 'p05': 8.0, 'p95': 131.0}
+Verification: {'count': 17002, 'mean': 23.711563345488766, 'median': 14.0, 'p05': 4.0, 'p95': 75.0}
+Payout: {'count': 16810, 'mean': 22.590838786436645, 'median': 15.0, 'p05': 15.0, 'p95': 59.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             16810
+Challenge        1762
+Verification     1236
+Funded            192
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    3190
+Name: count, dtype: int64
+Detta är väldigt bra, vi tappar ungefär 1.7% till payout men minimerar tiden från 92 dagar (median) till 69 dagar (median). Det blir tillräckligt aggressivt för snabbhet men inte så aggressivt att vi dör ofta, det är en perfekt balans. Och där är portföljen klar.
+Uppsättningen ser ut såhär i slutgiltig form:
+MAX_GROSS_EXPOSURE_TOTAL = 12.5
+
+STRATEGY_TARGETS = {
+    "TF_EQ": 1.125,
+    "MR_EQ": 0.875,
+    "TF_FX": 2.5,
+    "MR_FX": 8.0,
+}
+
+TF_EQ_MARKET_WEIGHTS = {
+          "US500": 0.34, 
+          "US100": 0.29, 
+          "US30": 0.37
+}
+MR_EQ_MARKET_WEIGHTS = {
+          "US500": 1/3,
+          "US100": 1/3,
+          "US30": 1/3
+          }
+TF_FX_MARKET_WEIGHTS = {
+    "EURJPY": 0.3567,
+    "GBPJPY": 0.2456,
+    "USDJPY": 0.3977,
+}
+MR_FX_MARKET_WEIGHTS = {
+    "EURCHF": 0.229429,
+    "EURCAD": 0.205126,
+    "GBPCHF": 0.196246,
+    "EURUSD": 0.190355,
+    "USDCHF": 0.178844,
+}
+EVAL_EXPOSURE_FACTOR = 2.0
+FUNDED_EXPOSURE_FACTOR = 1.0
+SOFT_CUTOFF_DAILY = -0.04
+
+REGIME_MARKET_MULTIPLIERS = {
+    # ExtremeVol overlays
+    ("ExtremeVol", "TF_EQ", "US100"): 0.50,
+    ("ExtremeVol", "TF_EQ", "US500"): 1.00,
+    ("ExtremeVol", "TF_EQ", "US30"): 1.00,
+
+    ("ExtremeVol", "MR_FX", "USDCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURUSD"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "GBPCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "EURCAD"): 0.65,
+
+    # LowVol overlays för TF_FX
+    ("LowVol", "TF_FX", "EURJPY"): 0.35,
+    ("LowVol", "TF_FX", "GBPJPY"): 0.35,
+    ("LowVol", "TF_FX", "USDJPY"): 1.00,
+}
