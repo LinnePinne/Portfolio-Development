@@ -22,7 +22,7 @@ from MT5exec_USequities_Forex import (
     open_short_by_notional,
 )
 
-BROKER_TZ = timezone(timedelta(hours=3))   # fast UTC+2 året runt
+BROKER_TZ = timezone(timedelta(hours=3))   # fast UTC+3 året runt
 LOCAL_TZ = ZoneInfo("Europe/Stockholm")
 
 def broker_ts_to_stockholm(ts: pd.Timestamp) -> pd.Timestamp:
