@@ -6,3 +6,20 @@ marknader en expansions strategi kan ha edge. Historiskt sett är det ofta JPY-p
 undersökningsfasen testa strategin på marknader som inte ännu ingår i portföljen men har en trendande struktur, exempelvis DAX 40, NIKKEI 225, Guld och Olja. När denna strategi adderas får portföljen exponering mot både lågvolatilitetsregimer (mean reversion) och 
 expansionsregimer (breakouts och trends). Detta skapar en mer robust portfölj med exponering mot både Forex och index, samt mot flera olika volatilitetsregimer och marknadsbeteenden. Nästa steg efter detta bör vara diversifiering av marknad, t.ex. råvaror som olja eller
 guld, andra världsregioners index. 
+(2026-03-23) Vi har nu byggt en trendföljande forex strategi som handlar EURJPY, USDJPY och GBPJPY. Vi har också byggt portföljen med alla fyra strategier och bestämt total exposure, strategi exposure, samt nedskalningsfaktor för vissa strategimarknader i låga/höga
+volatilitets regimer. Idag har vi fått igång liveboten som ska handla på FTMO challenge kontot, som i princip börjar på breakeven från och med idag. Det kontot som vi redan har ligger -8.5% och nu när vi byggt denna portfölj, är det dags att börja handla med det igen, vi 
+kommer köra några snabba bootstrapps här för att bestämma oss för om vi ska skala ner exponeringen och om det ens är värt det givet hur lång tid det tar och sannolikheten att gå upp till breakeven. Här är resultaten för utgångspunkten 1.0 nerskalningsfaktor:
+P(Pass Breakeven):    0.4941
+Breakeven: {'count': 9882, 'mean': 70.83758348512447, 'median': 61.0, 'p05': 15.0, 'p95': 159.0}
+0.5 som faktor:
+P(Pass Breakeven):    0.6984
+--- TIME TO EVENT (days) ---
+Breakeven: {'count': 13968, 'mean': 178.75408075601374, 'median': 159.0, 'p05': 58.0, 'p95': 369.0}
+0.3 som faktor:
+P(Pass Breakeven):    0.8591
+--- TIME TO EVENT (days) ---
+Breakeven: {'count': 17183, 'mean': 322.76936507012744, 'median': 297.0, 'p05': 134.0, 'p95': 603.0}
+Resultaten visar en tydlig trade-off: högre sannolikhet att nå breakeven uppnås endast till priset av betydligt längre återhämtningstid. Vid 1.0x exponering är sannolikheten ~49% med en median på 61 dagar, medan 0.5x och 0.3x ökar sannolikheten till ~70% respektive ~86%, 
+men förlänger tiden till cirka 5 respektive 10 månader. Givet att vi redan driver ett nytt challenge-konto med hög sannolikhet till payout inom kortare tid, blir det ineffektivt att binda kapital i en långsam återhämtningsprocess. Det neddragna kontot bör därför 
+behandlas som en opportunistisk position snarare än en central del av portföljen. Slutsatsen är att behålla hög exponering (1.0x eller marginellt lägre) för att maximera sannolikheten för snabb återhämtning, samtidigt som risken för att kontot når max loss accepteras. 
+Fokus för stabil tillväxt ligger istället på det nya kontot och andra framtida challenges.
