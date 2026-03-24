@@ -23,5 +23,6 @@ Breakeven: {'count': 17183, 'mean': 322.76936507012744, 'median': 297.0, 'p05': 
 Resultaten visar en tydlig trade-off: högre sannolikhet att nå breakeven uppnås endast till priset av betydligt längre återhämtningstid. Vid 1.0x exponering är sannolikheten ~49% med en median på 61 dagar, medan 0.5x och 0.3x ökar sannolikheten till ~70% respektive ~86%, 
 men förlänger tiden till cirka 5 respektive 10 månader. Givet att vi redan driver ett nytt challenge-konto med hög sannolikhet till payout inom kortare tid, blir det ineffektivt att binda kapital i en långsam återhämtningsprocess. Det neddragna kontot bör därför 
 behandlas som en opportunistisk position snarare än en central del av portföljen. Slutsatsen är att behålla hög exponering (1.0x eller marginellt lägre) för att maximera sannolikheten för snabb återhämtning, samtidigt som risken för att kontot når max loss accepteras. 
-Fokus för stabil tillväxt ligger istället på det nya kontot och andra framtida challenges. Nu ska vi börja bygga andra typer av strategier för råvaror som guld och olja. 
+Fokus för stabil tillväxt ligger istället på det nya kontot och andra framtida challenges. Nu ska vi börja bygga andra typer av strategier för råvaror som guld och olja. Som första hypotes, och det vi kommer utgå från är att olja är bra för trend (swing och intraday),
+guld är bra för mean reversion efter volatilitets spikar eller breakout under makro event.
 
