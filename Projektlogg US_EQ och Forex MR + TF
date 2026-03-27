@@ -2065,3 +2065,112 @@ REGIME_MARKET_MULTIPLIERS = {
     ("LowVol", "TF_FX", "GBPJPY"): 0.35,
     ("LowVol", "TF_FX", "USDJPY"): 1.00,
 }
+Nu har portföljen fått köra i en vecka och vi har upptäckt ett regelfel. I backtesten och i live koden har vi mätt max daily loss från start equity till nuvarande equity. Men 
+FTMO mäter på dagens högsta kontobalans och nuvarande equity, detta kan innebära att regeln kan brytas om dagen startar med tre öppna positioner från tidigare som ligger -4% 
+och sedan går -1% den dagen. Vi måste alltså ändra på detta för att få mer realistiska resultat, vi kör om backtesten och stänger alla positioner om equity går under -4% av 
+dagens start balans. Våran daily cutoff, som just nu plattar till dagens equity curve så att inget mer händer den dagen är inte optimalt. För att göra det mer passande för 
+FTMOs regler kommer vi stänga alla positioner och förbjuda nya postioner den dagen om equity går -4% under kontots start balans den dagen:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 1.00, Funded factor: 1.00
+P(Pass Challenge):    0.7292
+P(Pass Verification): 0.6096
+P(Reach 1st payout):  0.5634
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 14584, 'mean': 97.49629731212288, 'median': 78.0, 'p05': 22.0, 'p95': 239.0}
+Verification: {'count': 12192, 'mean': 47.62253937007874, 'median': 33.0, 'p05': 8.0, 'p95': 140.4499999999989}
+Payout: {'count': 11268, 'mean': 20.76109336173234, 'median': 15.0, 'p05': 15.0, 'p95': 50.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             11268
+Challenge        5416
+Verification     2392
+Funded            924
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss    8732
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2020-06-11    5.586052e+05      -0.080549
+2013-06-20    7.870945e+04      -0.063884
+2025-04-03    1.295951e+06      -0.060720
+2024-04-29    1.153820e+06      -0.058351
+2020-03-20    4.923073e+05      -0.056643
+2021-11-26    7.751993e+05      -0.056381
+2020-09-04    6.125758e+05      -0.054463
+2016-06-24    1.956690e+05      -0.052596
+2015-01-26    1.299276e+05      -0.049184
+2015-06-23    1.469952e+05      -0.049030
+Med en mycket ärligare ftmo simulation blir resultaten sämre så vi kommer vara tvungna att sänka exposure, 0.75:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8330
+P(Pass Verification): 0.7497
+P(Reach 1st payout):  0.7209
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 16661, 'mean': 144.22279575055518, 'median': 116.0, 'p05': 36.0, 'p95': 348.0}
+Verification: {'count': 14994, 'mean': 72.61978124583166, 'median': 51.0, 'p05': 11.0, 'p95': 206.0}
+Payout: {'count': 14419, 'mean': 22.833067480407795, 'median': 15.0, 'p05': 15.0, 'p95': 62.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             14419
+Challenge        3339
+Verification     1667
+Funded            575
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss         5579
+HorizonEnded       2
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2020-06-11    5.586052e+05      -0.080549
+2013-06-20    7.870945e+04      -0.063884
+2025-04-03    1.295951e+06      -0.060720
+2024-04-29    1.153820e+06      -0.058351
+2020-03-20    4.923073e+05      -0.056643
+2021-11-26    7.751993e+05      -0.056381
+2020-09-04    6.125758e+05      -0.054463
+2016-06-24    1.956690e+05      -0.052596
+2015-01-26    1.299276e+05      -0.049184
+2015-06-23    1.469952e+05      -0.049030
+Vi har nog lite utrymme att sänka cutoff till -4.5%:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8752
+P(Pass Verification): 0.8095
+P(Reach 1st payout):  0.7872
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17504, 'mean': 142.35231946983546, 'median': 116.0, 'p05': 36.0, 'p95': 338.0}
+Verification: {'count': 16191, 'mean': 72.40108702365512, 'median': 51.0, 'p05': 11.0, 'p95': 205.0}
+Payout: {'count': 15743, 'mean': 22.992949247284507, 'median': 15.0, 'p05': 15.0, 'p95': 63.0}
+--- FAIL STAGE COUNTS ---
+fail_stage
+NaN             15743
+Challenge        2496
+Verification     1313
+Funded            448
+Name: count, dtype: int64
+--- FAIL REASON COUNTS (non-null) ---
+fail_reason
+MaxLoss         4256
+HorizonEnded       1
+Name: count, dtype: int64
+--- WORST INTRADAY DD DAYS ---
+            DayStartEquity  MinIntradayDD
+date                                     
+2020-06-11    5.586052e+05      -0.080549
+2013-06-20    7.870945e+04      -0.063884
+2025-04-03    1.295951e+06      -0.060720
+2024-04-29    1.153820e+06      -0.058351
+2020-03-20    4.923073e+05      -0.056643
+2021-11-26    7.751993e+05      -0.056381
+2020-09-04    6.125758e+05      -0.054463
+2016-06-24    1.956690e+05      -0.052596
+2015-01-26    1.299276e+05      -0.049184
+2015-06-23    1.469952e+05      -0.049030
+Vi börjar om med 0.75 exposure och -4.5% cutoff.
