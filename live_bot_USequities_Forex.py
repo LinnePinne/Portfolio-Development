@@ -721,28 +721,103 @@ def overlay_info(strategy: str, market: str, regime: Optional[str], equity: floa
 # ==========================
 # RISK
 # ==========================
+def update_day_peak_balance_reference(state, balance: float):
+    """
+    FTMO-style internal risk reference:
+    starts from balance at midnight, but if balance increases during the day,
+    the reference ratchets upward.
+    """
+    ref = state.get("day_peak_balance_reference")
+    if ref is None:
+        state["day_peak_balance_reference"] = float(balance)
+        return
+
+    if float(balance) > float(ref):
+        state["day_peak_balance_reference"] = float(balance)
 
 def day_drawdown(day_start, equity):
     return equity / day_start - 1
 
 
-def risk_gate(state, equity):
-    day_start = state.get("day_start_equity", equity)
-    dd = day_drawdown(day_start, equity)
+def risk_gate(state, snap, cfg=None):
+    """
+    Returns:
+      allow_entries: bool
+      must_flatten: bool
 
-    if dd <= SOFT_CUTOFF_DAILY:
-        return False
+    Rule:
+      Flatten all if equity is <= 4% below today's highest balance reference.
+      Balance reference starts at midnight balance and ratchets upward if
+      account balance increases during the day.
+    """
+    equity = float(snap["equity"])
+    balance = float(snap["balance"])
 
-    daily_abs = DAILY_LOSS_LIMIT_ABS_FRAC * START_BALANCE_FOR_LIMITS
-    if equity < day_start - daily_abs:
-        return False
+    # Update today's highest balance reference
+    update_day_peak_balance_reference(state, balance)
 
-    max_floor = START_BALANCE_FOR_LIMITS * (1 - MAX_LOSS_LIMIT_ABS_FRAC)
-    if equity < max_floor:
-        return False
+    ref_balance = float(state.get("day_peak_balance_reference", balance))
+    day_start_balance = float(state.get("day_start_balance", balance))
 
-    return True
+    # Internal daily kill threshold: -4% from intraday highest balance reference
+    soft_floor = ref_balance * (1.0 + SOFT_CUTOFF_DAILY)  # SOFT_CUTOFF_DAILY = -0.04
 
+    # Absolute max loss floor (still keep this if you want account-wide protection)
+    max_floor = START_BALANCE_FOR_LIMITS * (1.0 - MAX_LOSS_LIMIT_ABS_FRAC)
+
+    must_flatten = False
+    allow_entries = True
+
+    # Already flattened once today -> no new entries rest of day
+    if state.get("risk_flattened_today", False):
+        allow_entries = False
+
+    # Daily rule breach based on equity vs intraday peak balance reference
+    if equity <= soft_floor:
+        must_flatten = True
+        allow_entries = False
+
+    # Hard max loss protection
+    if equity <= max_floor:
+        must_flatten = True
+        allow_entries = False
+
+    print(
+        f"[RISK] balance={balance:.2f} equity={equity:.2f} "
+        f"day_start_balance={day_start_balance:.2f} "
+        f"peak_balance_ref={ref_balance:.2f} "
+        f"soft_floor={soft_floor:.2f} max_floor={max_floor:.2f} "
+        f"allow_entries={allow_entries} must_flatten={must_flatten}"
+    )
+
+    return allow_entries, must_flatten
+
+def flatten_all_known_positions(cfg):
+    """
+    Closes all positions managed by this bot, across all strategies/markets.
+    """
+    all_markets = TF_EQ_MARKETS + MR_EQ_MARKETS + TF_FX_MARKETS + MR_FX_MARKETS
+    seen = set()
+
+    for m in all_markets:
+        name = m["name"]
+        sym = m["symbol"]
+
+        for strat in ["TF_EQ", "MR_EQ", "TF_FX", "MR_FX"]:
+            key = (name, strat)
+            if key not in MAGIC_MAP:
+                continue
+
+            magic = magic_for(name, strat)
+            uniq = (sym, magic)
+            if uniq in seen:
+                continue
+            seen.add(uniq)
+
+            try:
+                close_position_market(sym, magic, cfg, "RISK_FLATTEN")
+            except Exception as e:
+                print(f"[RISK FLATTEN ERROR] symbol={sym} magic={magic} err={e}")
 
 # ==========================
 # STRATEGY EXECUTION
@@ -984,6 +1059,9 @@ def main():
 
     state.setdefault("day_start_equity", None)
     state.setdefault("day_start_date", None)
+    state.setdefault("day_start_balance", None)
+    state.setdefault("day_peak_balance_reference", None)
+    state.setdefault("risk_flattened_today", False)
     state.setdefault("tf_eq_bc", {})
     state.setdefault("mr_eq_processed_d1", {})
     state.setdefault("tf_fx_processed_h1", {})
@@ -1016,10 +1094,23 @@ def main():
             if state.get("day_start_date") != today:
                 state["day_start_date"] = today
                 state["day_start_equity"] = equity
+                state["day_start_balance"] = float(snap["balance"])
+                state["day_peak_balance_reference"] = float(snap["balance"])
+                state["risk_flattened_today"] = False
                 state["market_regime_cache"] = {}
-                print("New day equity:", equity)
 
-            allow = risk_gate(state, equity)
+                print(
+                    f"New day: balance={state['day_start_balance']:.2f} "
+                    f"equity={state['day_start_equity']:.2f}"
+                )
+
+            allow, must_flatten = risk_gate(state, snap, cfg)
+
+            if must_flatten and not state.get("risk_flattened_today", False):
+                print(f"[{now_str()}] RISK FLATTEN TRIGGERED")
+                flatten_all_known_positions(cfg)
+                state["risk_flattened_today"] = True
+                allow = False
 
             run_tf_eq(cfg, state, allow)
             run_mr_eq(cfg, state, allow)
