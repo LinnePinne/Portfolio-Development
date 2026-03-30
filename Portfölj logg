@@ -25,4 +25,33 @@ men förlänger tiden till cirka 5 respektive 10 månader. Givet att vi redan dr
 behandlas som en opportunistisk position snarare än en central del av portföljen. Slutsatsen är att behålla hög exponering (1.0x eller marginellt lägre) för att maximera sannolikheten för snabb återhämtning, samtidigt som risken för att kontot når max loss accepteras. 
 Fokus för stabil tillväxt ligger istället på det nya kontot och andra framtida challenges. Nu ska vi börja bygga andra typer av strategier för råvaror som guld och olja. Som första hypotes, och det vi kommer utgå från är att olja är bra för trend (swing och intraday),
 guld är bra för mean reversion efter volatilitets spikar eller breakout under makro event.
+(2026-03-30) Vi har uppdaterat vår tidigare FTMO simulator, förut fungerade våran cutoff genom att platta varje dag som gick under -4,5%. Men nu fungerar den mer realistiskt utifrån FTMO. När tröskeln bryts stängs alla öppna positioner samtidigt som inga nya postioner får 
+öppnas den dagen. Med denna mer realistiska simulationen blir resultaten värre. Därför har vi bestämt oss att skala ner våran challenge exposure till 0.75 istället för 2.0, då har vi lite sämre sannolikhet och det dröjar ungefär dubbelt så lång tid som innan. Men det är 
+fortfarnde bra, resultaten innan var nästan för bra för att vara sant. På grund av detta testar vi även att simulera vårat existerande FTMO konto på nytt, vi utågr från 0.5 här. Dessutom låter vi i cutoffen bero på kontots existerande nivå på detta sätt från -10% till 
+-7% → cutoff = -0.75%, från -7% till -4.5% → cutoff = -1.5%, från -4.5% till 0% → cutoff = -3.0%. Kontobalans är just nu på 45750 och då blir target 50000/45750 -1 = 0.092896, max loss limit blir (45750-45000)/45750 = 0.016393:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+P(Breakeven):    0.5990
+--- TIME TO EVENT (days) ---
+Breakeven: {'count': 11980, 'mean': 160.97253756260434, 'median': 142.0, 'p05': 54.0, 'p95': 337.0}
+Vi simulerar även challange där cutoff blir -3% när kontot når -2% och -1.5% när kontot når -4%, -4.5% cutoff annars. 0.75 exposure:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.9364
+P(Pass Verification): 0.8975
+P(Reach 1st payout):  0.8831
 
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18728, 'mean': 151.59354976505767, 'median': 121.0, 'p05': 37.0, 'p95': 370.0}
+Verification: {'count': 17951, 'mean': 76.35702746365105, 'median': 53.0, 'p05': 11.0, 'p95': 221.0}
+Payout: {'count': 17663, 'mean': 23.71980977183944, 'median': 15.0, 'p05': 15.0, 'p95': 68.0}
+
+Detta är basline med cutoff på -4.5% hela tiden så vi kan jämföra:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8752
+P(Pass Verification): 0.8095
+P(Reach 1st payout):  0.7872
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17504, 'mean': 142.35231946983546, 'median': 116.0, 'p05': 36.0, 'p95': 338.0}
+Verification: {'count': 16191, 'mean': 72.40108702365512, 'median': 51.0, 'p05': 11.0, 'p95': 205.0}
+Payout: {'count': 15743, 'mean': 22.992949247284507, 'median': 15.0, 'p05': 15.0, 'p95': 63.0}
