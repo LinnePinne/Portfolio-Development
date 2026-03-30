@@ -45,7 +45,40 @@ Challenge: {'count': 18728, 'mean': 151.59354976505767, 'median': 121.0, 'p05': 
 Verification: {'count': 17951, 'mean': 76.35702746365105, 'median': 53.0, 'p05': 11.0, 'p95': 221.0}
 Payout: {'count': 17663, 'mean': 23.71980977183944, 'median': 15.0, 'p05': 15.0, 'p95': 68.0}
 
-Detta är basline med cutoff på -4.5% hela tiden så vi kan jämföra:
+Det blir en klar förbättring, nu har vi ltie bevis på att det blir bättre när vi sänker risk i drawdown, då är nästa steg att testa dynamisk exposure. Det är troligtivs bättre, med cutoff stoppar vi dagen vilket är reaktivt men med exoposure kan vi minska risk innan det blir 
+dåligt vilket är mer proaktivt. Dessutom, om vi har en fast cutoff på -4% eller -4.5% så blir alltid fail reason max loss, inte max daily loss. Därför är det max loss vi borde skydda oss mot dynamiskt. I första testet sätts bas exposure till 0.8, där basen multipliceras med
+0.8 när kontot går -2%, 0.6 när kontot går -4% och 0.4 när kontot går -7%. Exposure höjs även med 1.25 när kontot ligger 2.5% plus med 1.25 så att exposure factor blir 1.0. Bas cutoff ligger på -4.0% och sänks till -3.0% när kontot når -4%, När kontot når -7% sänks cutoff 
+till -1.5%:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.00%, Eval factor: 0.80, Funded factor: 1.00
+P(Pass Challenge):    0.8761
+P(Pass Verification): 0.8123
+P(Reach 1st payout):  0.7661
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17523, 'mean': 145.23403526793356, 'median': 102.0, 'p05': 27.0, 'p95': 417.0}
+Verification: {'count': 16246, 'mean': 77.7352579096393, 'median': 47.0, 'p05': 9.0, 'p95': 256.0}
+Payout: {'count': 15321, 'mean': 25.793094445532276, 'median': 15.0, 'p05': 15.0, 'p95': 80.0}
+-4.5% som cutoff istället:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.80, Funded factor: 1.00
+P(Pass Challenge):    0.8830
+P(Pass Verification): 0.8210
+P(Reach 1st payout):  0.7774
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17659, 'mean': 138.68956339543575, 'median': 99.0, 'p05': 27.0, 'p95': 388.0}
+Verification: {'count': 16420, 'mean': 76.09220462850183, 'median': 46.0, 'p05': 9.0, 'p95': 249.0}
+Payout: {'count': 15549, 'mean': 25.147469290629623, 'median': 15.0, 'p05': 15.0, 'p95': 74.0}
+Båda faktorerna på 0.75 och exposure multipliceras med 1.5 när kontot ligger 5.1% plus (alltså endast för första steget):
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8931
+P(Pass Verification): 0.8363
+P(Reach 1st payout):  0.8168
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17863, 'mean': 146.51838996809047, 'median': 107.0, 'p05': 30.0, 'p95': 404.0}
+Verification: {'count': 16725, 'mean': 81.4185351270553, 'median': 50.0, 'p05': 10.0, 'p95': 266.7999999999993}
+Payout: {'count': 16336, 'mean': 27.073763467189032, 'median': 15.0, 'p05': 15.0, 'p95': 84.0}
+Detta är basline med cutoff på -4.5% hela tiden och statiskt exposure så vi kan jämföra:
 --- FTMO PIPELINE (DayPath Bootstrap) ---
 Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
 P(Pass Challenge):    0.8752
@@ -55,5 +88,47 @@ P(Reach 1st payout):  0.7872
 Challenge: {'count': 17504, 'mean': 142.35231946983546, 'median': 116.0, 'p05': 36.0, 'p95': 338.0}
 Verification: {'count': 16191, 'mean': 72.40108702365512, 'median': 51.0, 'p05': 11.0, 'p95': 205.0}
 Payout: {'count': 15743, 'mean': 22.992949247284507, 'median': 15.0, 'p05': 15.0, 'p95': 63.0}
-Det blir en klar förbättring, nu har vi ltie bevis på att det blir bättre när vi sänker risk i drawdown, då är nästa steg att testa dynamisk exposure. Det är troligtivs bättre, med cutoff stoppar vi dagen vilket är reaktivt men med exoposure kan vi minska risk innan det blir 
-dåligt vilket är mer proaktivt. Dessutom, om vi har en fast cutoff på -4% eller -4.5% så blir alltid fail reason max loss, inte max daily loss. Därför är det max loss vi borde skydda oss mot dynamiskt.
+Dynamisk riskstyrning hjälper utan tvekan. Det är logiskt eftersom våra fail reasons endast driva av maxloss så det enda vi försöker skydda oss mot är kumulativa förlust perioder, inte bara enskilda dåliga dagar. Jämfölreelsevis på det sista dynamiska-riskalternativet med 
+baseline tjänar vi 3 procentenhter att nå payout samtidigt som vi kortar ner totala perioden med 10 dagar. Intutionen var att dynamiski exposure skulle vara bättre, men alternativet med endast dynamisk cutoff ger 7 procent högre sannolikhet att nå payout. Däremot tar det
+totalt 17 dagar mer, men detta är en acceptabel deal. Vi testar endast dynamisk exposure för att enklare avgöra vilken modell som är bäst.
+Med exposure:
+if dd < -0.07:
+    return 0.40
+elif dd < -0.04:
+    return 0.60
+elif dd < -0.02:
+    return 0.80
+elif dd > 0.025:
+    return 1.25
+elif dd > 0.055:
+    return 1.51
+else:
+    return 1.00
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.9308
+P(Pass Verification): 0.8925
+P(Reach 1st payout):  0.8789
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18616, 'mean': 157.12483884830255, 'median': 108.0, 'p05': 28.0, 'p95': 463.0}
+Verification: {'count': 17851, 'mean': 88.46820906391798, 'median': 51.0, 'p05': 10.0, 'p95': 299.0}
+Payout: {'count': 17577, 'mean': 28.88462194913808, 'median': 15.0, 'p05': 15.0, 'p95': 96.0}
+Detta är det bästa alternativ än så länge. Dynamisk exposure är nästan lika bra som endast cutoff när det kommer till sannolikhet, med färre totala dagar. Den hanterar risk mer proaktivt och effetkivt.
+Vi kan testa att vara mindre konservativa i cutoff modellen och endast tillämpa den när kontot faktiskt är nära på att faila. Exposure modellen från senaste testet tillsammans med denna cutoff modellen:   
+if dd < -0.080:
+    return -0.010
+elif dd < -0.070:
+    return -0.015
+else:
+    return -0.045
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8942
+P(Pass Verification): 0.8375
+P(Reach 1st payout):  0.8171
+
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17883, 'mean': 143.77268914611642, 'median': 103.0, 'p05': 28.0, 'p95': 401.8999999999978}
+Verification: {'count': 16750, 'mean': 81.16955223880598, 'median': 50.0, 'p05': 10.0, 'p95': 262.5499999999993}
+Payout: {'count': 16341, 'mean': 26.656446973869407, 'median': 15.0, 'p05': 15.0, 'p95': 82.0}
+Vi behåller dynamisk exposure ensamt och itället för att testa oss fram och gissa nivåer låter vi bootstrappen testa många kombinationer och rankar dem utifrån balans mellan fart och sannolikhet:
+
