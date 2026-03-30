@@ -55,3 +55,5 @@ P(Reach 1st payout):  0.7872
 Challenge: {'count': 17504, 'mean': 142.35231946983546, 'median': 116.0, 'p05': 36.0, 'p95': 338.0}
 Verification: {'count': 16191, 'mean': 72.40108702365512, 'median': 51.0, 'p05': 11.0, 'p95': 205.0}
 Payout: {'count': 15743, 'mean': 22.992949247284507, 'median': 15.0, 'p05': 15.0, 'p95': 63.0}
+Det blir en klar förbättring, nu har vi ltie bevis på att det blir bättre när vi sänker risk i drawdown, då är nästa steg att testa dynamisk exposure. Det är troligtivs bättre, med cutoff stoppar vi dagen vilket är reaktivt men med exoposure kan vi minska risk innan det blir 
+dåligt vilket är mer proaktivt. Dessutom, om vi har en fast cutoff på -4% eller -4.5% så blir alltid fail reason max loss, inte max daily loss. Därför är det max loss vi borde skydda oss mot dynamiskt.
