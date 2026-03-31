@@ -382,4 +382,6 @@ Breakeven: {'count': 6559, 'mean': 61.72434822381461, 'median': 53.0, 'p05': 17.
 Våldigt dålig recovery rate, men om vi kan sänka exposure tills vi når 70%+ sannolikhet och håller oss under 100 dagar är det värt att gå vidare med ett två-stegs konto samtidigt som detta konto ska köras. Vi 
 testar dessa nedskalningsfaktorer i en optimerings bootstrapp:
 candidate_values = [0.10, 0.25, 0.40, 0.60, 0.80, 1.00, 1.25] och sen lägger vi även in en till bucket på <-8.5%:
-bucket_order = ["<-8.5%", "-8.5%_-7%", "-7%_-4%", "-4%_-2%", "-2%_0%", "0%_2.5%", "2.5%_5%", ">5%"]
+bucket_order = ["<-8.5%", "-8.5%_-7%", "-7%_-4%", "-4%_-2%", "-2%_0%", "0%_2.5%", "2.5%_5%", ">5%"], vi kör max_configs = 80 och 3000 iterationer här också bara för att få en grov uppfattning och slippa timmar lång 
+runtime:
+
