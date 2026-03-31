@@ -3,15 +3,12 @@ import time
 from datetime import datetime, date
 from typing import Optional, Tuple
 
-from datetime import timezone, timedelta
-from zoneinfo import ZoneInfo
-
 import numpy as np
 import pandas as pd
 import ta
 import MetaTrader5 as mt5
 
-from MT5exec_USequities_Forex import (
+from mt5_exec import (
     ExecConfig,
     ensure_initialized,
     ensure_symbol,
@@ -22,24 +19,6 @@ from MT5exec_USequities_Forex import (
     open_short_by_notional,
 )
 
-BROKER_TZ = timezone(timedelta(hours=3))   # fast UTC+3 året runt
-LOCAL_TZ = ZoneInfo("Europe/Stockholm")
-
-def broker_ts_to_stockholm(ts: pd.Timestamp) -> pd.Timestamp:
-    """
-    Tolkar naiv MT5-timestamp som broker time (fast UTC+2)
-    och konverterar till Europe/Stockholm.
-    """
-    if ts.tzinfo is None:
-        ts = ts.tz_localize(BROKER_TZ)
-    else:
-        ts = ts.tz_convert(BROKER_TZ)
-
-    return ts.tz_convert(LOCAL_TZ)
-
-def log_bar_times(label: str, ts: pd.Timestamp):
-    st = broker_ts_to_stockholm(ts)
-    print(f"[{now_str()}] {label} broker_ts={ts} stockholm_ts={st}")
 
 # ==========================
 # CONFIG
@@ -141,9 +120,19 @@ FUNDED_EXPOSURE_FACTOR = 0.75
 
 SOFT_CUTOFF_DAILY = -0.045
 
-START_BALANCE_FOR_LIMITS = 50_000
+START_BALANCE = 50_000
 DAILY_LOSS_LIMIT_ABS_FRAC = 0.05
 MAX_LOSS_LIMIT_ABS_FRAC = 0.10
+
+DYNAMIC_EXPOSURE_MAP = {
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+}
 
 TF_EQ_PARAMS = dict(
     exit_confirm_bars=10,
@@ -241,6 +230,7 @@ def prev_closed_bar(df):
 # ==========================
 # MAGIC
 # ==========================
+
 MAGIC_MAP = {
     ("US500", "TF_EQ"): 11001,
     ("US100", "TF_EQ"): 11002,
@@ -287,19 +277,12 @@ def clamp_time_series_index_unique(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def in_session(ts: pd.Timestamp, session_start: str, session_end: str) -> bool:
-    """
-    Sessionerna definieras i Stockholm-tid.
-    MT5-barens timestamp tolkas först som broker time (fast UTC+2),
-    och konverteras sedan till Stockholm-tid.
-    """
     start_t = pd.to_datetime(session_start).time()
     end_t = pd.to_datetime(session_end).time()
-    local_ts = broker_ts_to_stockholm(ts)
-    t = local_ts.time()
+    t = ts.time()
 
     if start_t < end_t:
         return (t >= start_t) and (t < end_t)
-
     return (t >= start_t) or (t < end_t)
 
 
@@ -337,49 +320,27 @@ def ATR(df_in: pd.DataFrame, period: int = 14, method: str = "wilder") -> pd.Ser
 
 
 def asia_range(df_in: pd.DataFrame) -> pd.DataFrame:
-    """
-    Bygger Asia range på Stockholm-tid, även om df.index är broker/MT5-tid.
-    Behåller originalindex i output.
-    """
     data = df_in.copy()
 
-    if not isinstance(data.index, pd.DatetimeIndex):
-        raise ValueError("DataFrame måste ha DateTimeIndex")
-
-    # Konvertera varje broker-ts till Stockholm-ts
-    stockholm_index = pd.DatetimeIndex([broker_ts_to_stockholm(ts) for ts in data.index])
-
-    # Temporary helper frame with Stockholm index for session slicing
-    tmp = data.copy()
-    tmp["stockholm_ts"] = stockholm_index
-    tmp = tmp.set_index("stockholm_ts")
-
-    # Asia session in Stockholm time
-    session = tmp.between_time("00:00", "07:00")
-
-    # Group by Stockholm calendar day
+    session = data.between_time("00:00", "07:00")
     daily_range = session.groupby(session.index.date).agg(
         asia_high=("high", "max"),
         asia_low=("low", "min")
     )
 
-    # Map back to original dataframe via Stockholm calendar date
-    data["stockholm_date"] = stockholm_index.date
+    data["date"] = data.index.date
     data = data.merge(
         daily_range,
-        left_on="stockholm_date",
+        left_on="date",
         right_index=True,
         how="left"
     )
 
     data["asia_range"] = data["asia_high"] - data["asia_low"]
-    data["asia_mid"] = (data["asia_high"] + data["asia_low"]) / 2.0
+    data["asia_mid"] = (data["asia_high"] + data["asia_low"]) / 2
 
-    # For bars before 08:00 Stockholm, hide same-day Asia values
-    before_8 = pd.Index(stockholm_index.hour) < 8
-    data.loc[before_8, ["asia_high", "asia_low", "asia_range", "asia_mid"]] = np.nan
-
-    data.drop(columns="stockholm_date", inplace=True)
+    data.loc[data.index.hour < 8, ["asia_high", "asia_low", "asia_range", "asia_mid"]] = np.nan
+    data.drop(columns="date", inplace=True)
 
     return data
 
@@ -394,12 +355,9 @@ def compute_session_anchored_vwap_and_std(data: pd.DataFrame, vol_col: str, rese
     df_v["vol"] = vol
     df_v["tp_vol"] = df_v["tp"] * df_v["vol"]
 
-    stockholm_index = pd.DatetimeIndex([broker_ts_to_stockholm(ts) for ts in df_v.index])
-
     rt = pd.to_datetime(reset_time).time()
-
-    session_date = stockholm_index.floor("D")
-    session_date = session_date.where(stockholm_index.time >= rt, session_date - pd.Timedelta(days=1))
+    session_date = df_v.index.floor("D")
+    session_date = session_date.where(df_v.index.time >= rt, session_date - pd.Timedelta(days=1))
     df_v["session_date"] = session_date
 
     g = df_v.groupby("session_date", sort=False)
@@ -596,10 +554,44 @@ def mr_fx_exit(prev, direction: str) -> bool:
 # ==========================
 # EXPOSURE / OVERLAY
 # ==========================
+def dd_bucket_from_balance(current_equity: float, reference_balance: float) -> str:
+    dd = current_equity / reference_balance - 1.0
 
-def strategy_targets():
-    factor = EVAL_EXPOSURE_FACTOR if MODE == "EVAL" else FUNDED_EXPOSURE_FACTOR
-    return {k: v * factor for k, v in STRATEGY_TARGETS_BASE.items()}
+    if dd < -0.07:
+        return "<-7%"
+    elif dd < -0.04:
+        return "-7%_-4%"
+    elif dd < -0.02:
+        return "-4%_-2%"
+    elif dd < 0.0:
+        return "-2%_0%"
+    elif dd < 0.025:
+        return "0%_2.5%"
+    elif dd < 0.05:
+        return "2.5%_5%"
+    else:
+        return ">5%"
+
+
+def dynamic_exposure_multiplier(
+    current_equity: float,
+    reference_balance: float = START_BALANCE,
+) -> float:
+    bucket = dd_bucket_from_balance(current_equity, reference_balance)
+    return float(DYNAMIC_EXPOSURE_MAP[bucket])
+
+
+def strategy_targets(current_equity: float):
+    """
+    Bas-targets * global dynamic exposure factor.
+    Regime-overlay appliceras separat per market/strategy senare.
+    """
+    base_factor = EVAL_EXPOSURE_FACTOR if MODE == "EVAL" else FUNDED_EXPOSURE_FACTOR
+    dd_factor = dynamic_exposure_multiplier(current_equity)
+
+    total_factor = base_factor * dd_factor
+
+    return {k: float(v) * total_factor for k, v in STRATEGY_TARGETS_BASE.items()}
 
 
 def open_positions_gross_notional():
@@ -671,6 +663,9 @@ def strategy_target_with_regime_overlay(
     base_target: float,
     market_regime_label: Optional[str],
 ) -> float:
+    """
+    Tar already dynamically scaled base_target och lägger på market-specific regime overlay.
+    """
     target = float(base_target)
 
     if not USE_REGIME_OVERLAY:
@@ -692,7 +687,14 @@ def desired_notional(
     market: str,
     market_regime_label: Optional[str] = None,
 ) -> float:
-    targets = strategy_targets()
+    """
+    Final desired notional:
+      equity
+    * dynamic exposure adjusted strategy target
+    * market weight
+    * optional regime overlay
+    """
+    targets = strategy_targets(equity)
     base_target = float(targets[strat])
 
     adj_target = strategy_target_with_regime_overlay(
@@ -707,20 +709,61 @@ def desired_notional(
 
 
 def overlay_info(strategy: str, market: str, regime: Optional[str], equity: float) -> Tuple[float, float]:
-    targets = strategy_targets()
+    """
+    Debug helper:
+      base_notional = dynamic exposure only
+      adj_notional  = dynamic exposure + regime overlay
+    """
+    targets = strategy_targets(equity)
     base_target = float(targets[strategy])
     w = float(STRATEGY_MARKET_WEIGHTS[strategy][market])
 
     base_notional = equity * base_target * w
-    adj_target = strategy_target_with_regime_overlay(strategy, market, base_target, regime)
+
+    adj_target = strategy_target_with_regime_overlay(
+        strategy=strategy,
+        market=market,
+        base_target=base_target,
+        market_regime_label=regime,
+    )
     adj_notional = equity * adj_target * w
 
     return float(base_notional), float(adj_notional)
 
+def sizing_debug_info(strategy: str, market: str, regime: Optional[str], equity: float) -> dict:
+    mode_factor = EVAL_EXPOSURE_FACTOR if MODE == "EVAL" else FUNDED_EXPOSURE_FACTOR
+    dd_bucket = dd_bucket_from_balance(equity, START_BALANCE)
+    dd_factor = dynamic_exposure_multiplier(equity, START_BALANCE)
 
+    regime_mult = 1.0
+    if USE_REGIME_OVERLAY and regime is not None:
+        regime_mult = float(
+            REGIME_MARKET_MULTIPLIERS.get((str(regime), str(strategy), str(market)), 1.0)
+        )
+
+    base_target_raw = float(STRATEGY_TARGETS_BASE[strategy])
+    market_weight = float(STRATEGY_MARKET_WEIGHTS[strategy][market])
+
+    final_factor = mode_factor * dd_factor * regime_mult
+
+    base_notional = equity * base_target_raw * mode_factor * dd_factor * market_weight
+    adj_notional = equity * base_target_raw * mode_factor * dd_factor * regime_mult * market_weight
+
+    return {
+        "mode_factor": float(mode_factor),
+        "dd_bucket": dd_bucket,
+        "dd_factor": float(dd_factor),
+        "regime_mult": float(regime_mult),
+        "final_factor": float(final_factor),
+        "base_target_raw": float(base_target_raw),
+        "market_weight": float(market_weight),
+        "base_notional": float(base_notional),
+        "adj_notional": float(adj_notional),
+    }
 # ==========================
 # RISK
 # ==========================
+
 def update_day_peak_balance_reference(state, balance: float):
     """
     FTMO-style internal risk reference:
@@ -763,7 +806,7 @@ def risk_gate(state, snap, cfg=None):
     soft_floor = ref_balance * (1.0 + SOFT_CUTOFF_DAILY)  # SOFT_CUTOFF_DAILY = -0.04
 
     # Absolute max loss floor (still keep this if you want account-wide protection)
-    max_floor = START_BALANCE_FOR_LIMITS * (1.0 - MAX_LOSS_LIMIT_ABS_FRAC)
+    max_floor = START_BALANCE * (1.0 - MAX_LOSS_LIMIT_ABS_FRAC)
 
     must_flatten = False
     allow_entries = True
@@ -869,7 +912,14 @@ def run_tf_eq(cfg, state, allow_entries):
             base_notional, adj_notional = overlay_info("TF_EQ", name, regime, equity)
             notional = min(adj_notional, capacity)
 
-            print(f"[{now_str()}] TF_EQ {name} regime={regime} base_notional={base_notional:.2f} adj_notional={adj_notional:.2f}")
+            dbg = sizing_debug_info("TF_EQ", name, regime, equity)
+            print(
+                f"[{now_str()}] TF_EQ {name} regime={regime} "
+                f"mode_factor={dbg['mode_factor']:.2f} "
+                f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+                f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+                f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+            )
 
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "TF_EQ_ENTRY")
             if ok:
@@ -916,7 +966,14 @@ def run_mr_eq(cfg, state, allow_entries):
             base_notional, adj_notional = overlay_info("MR_EQ", name, regime, equity)
             notional = min(adj_notional, capacity)
 
-            print(f"[{now_str()}] MR_EQ {name} regime={regime} base_notional={base_notional:.2f} adj_notional={adj_notional:.2f}")
+            dbg = sizing_debug_info("MR_EQ", name, regime, equity)
+            print(
+                f"[{now_str()}] MR_EQ {name} regime={regime} "
+                f"mode_factor={dbg['mode_factor']:.2f} "
+                f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+                f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+                f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+            )
 
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "MR_EQ_ENTRY")
             if ok:
@@ -949,9 +1006,6 @@ def run_tf_fx(cfg, state, allow_entries):
         prev = last_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
 
-        # DEBUG
-        #log_bar_times(name, prev.name)
-
         if processed.get(name) == bar_id:
             continue
 
@@ -974,7 +1028,14 @@ def run_tf_fx(cfg, state, allow_entries):
         base_notional, adj_notional = overlay_info("TF_FX", name, regime, equity)
         notional = min(adj_notional, capacity)
 
-        print(f"[{now_str()}] TF_FX {name} regime={regime} signal={signal} base_notional={base_notional:.2f} adj_notional={adj_notional:.2f}")
+        dbg = sizing_debug_info("TF_FX", name, regime, equity)
+        print(
+            f"[{now_str()}] TF_FX {name} regime={regime} signal={signal} "
+            f"mode_factor={dbg['mode_factor']:.2f} "
+            f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+            f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+            f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+        )
 
         if signal == "LONG":
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "TF_FX_ENTRY_LONG")
@@ -1034,7 +1095,14 @@ def run_mr_fx(cfg, state, allow_entries):
         base_notional, adj_notional = overlay_info("MR_FX", name, regime, equity)
         notional = min(adj_notional, capacity)
 
-        print(f"[{now_str()}] MR_FX {name} regime={regime} signal={signal} base_notional={base_notional:.2f} adj_notional={adj_notional:.2f}")
+        dbg = sizing_debug_info("MR_FX", name, regime, equity)
+        print(
+            f"[{now_str()}] MR_FX {name} regime={regime} signal={signal} "
+            f"mode_factor={dbg['mode_factor']:.2f} "
+            f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+            f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+            f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+        )
 
         if signal == "LONG":
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "MR_FX_ENTRY_LONG")
@@ -1123,7 +1191,13 @@ def main():
             if now - last_heartbeat > HEARTBEAT_EVERY_SEC:
                 last_heartbeat = now
                 dd = day_drawdown(state["day_start_equity"], equity)
-                print(f"[{now_str()}] equity={equity:.2f} dd={dd:.2%} allow={allow}")
+                dd_bucket = dd_bucket_from_balance(equity, START_BALANCE)
+                dd_mult = dynamic_exposure_multiplier(equity, START_BALANCE)
+
+                print(
+                    f"[{now_str()}] equity={equity:.2f} dd={dd:.2%} allow={allow} "
+                    f"dd_bucket={dd_bucket} dd_mult={dd_mult:.2f}"
+                )
 
         except Exception as e:
             print("ERROR:", e)
