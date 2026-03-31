@@ -130,9 +130,9 @@ P(Reach 1st payout):  0.8171
 Challenge: {'count': 17883, 'mean': 143.77268914611642, 'median': 103.0, 'p05': 28.0, 'p95': 401.8999999999978}
 Verification: {'count': 16750, 'mean': 81.16955223880598, 'median': 50.0, 'p05': 10.0, 'p95': 262.5499999999993}
 Payout: {'count': 16341, 'mean': 26.656446973869407, 'median': 15.0, 'p05': 15.0, 'p95': 82.0}
-Vi behåller dynamisk exposure ensamt och itället för att testa oss fram och gissa nivåer låter vi bootstrappen testa många kombinationer och rankar dem utifrån balans mellan fart och sannolikhet. I den vanliga
-FTMO simulationen körs 20 000 iterationer men när vi kör olika kombinationer av nedskalning kommer detta ta för lång tid, därför körs istället 3000 iterationer per path och vi kör 5 olika nedskalningsfaktorer
-med maximalt 80 configs så det blir 240,000 paths. Vi rankar top 20:
+(2026-03-31) Vi behåller dynamisk exposure ensamt och itället för att testa oss fram och gissa nivåer låter vi bootstrappen testa många kombinationer och rankar dem utifrån balans mellan fart och sannolikhet. 
+I den vanliga FTMO simulationen körs 20 000 iterationer men när vi kör olika kombinationer av nedskalning kommer detta ta för lång tid, därför körs istället 3000 iterationer per path och vi kör 5 olika 
+nedskalningsfaktorer med maximalt 80 configs så det blir 240,000 paths. Vi rankar top 20:
 --- DYNAMIC EXPOSURE OPTIMIZATION: TOP 20 ---
                                                                                                        Config  Overall Score  P(Pass Challenge)  P(Pass Verification)  P(Reach 1st payout)  Challenge Median Days  Verification Median Days  Payout Median Days  Exp <-7%  Exp -7%_-4%  Exp -4%_-2%  Exp -2%_0%  Exp 0%_2.5%  Exp 2.5%_5%  Exp >5%
   {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.8, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.208449           0.899667              0.942942             0.980747                  103.0                      45.0                15.0       0.4          0.4         0.80        1.00         1.25         1.25     1.25
@@ -384,4 +384,36 @@ testar dessa nedskalningsfaktorer i en optimerings bootstrapp:
 candidate_values = [0.10, 0.25, 0.40, 0.60, 0.80, 1.00, 1.25] och sen lägger vi även in en till bucket på <-8.5%:
 bucket_order = ["<-8.5%", "-8.5%_-7%", "-7%_-4%", "-4%_-2%", "-2%_0%", "0%_2.5%", "2.5%_5%", ">5%"], vi kör max_configs = 80 och 3000 iterationer här också bara för att få en grov uppfattning och slippa timmar lång 
 runtime:
-
+--- DYNAMIC EXPOSURE OPTIMIZATION: TOP 20 ---
+                                                                                                     Config  Overall Score  P(Pass Breakeven)  Challenge Median Days  Exp <-7%  Exp -7%_-4%  Exp -4%_-2%  Exp -2%_0%  Exp 0%_2.5%  Exp 2.5%_5%  Exp >5%
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.4, '>5%': 0.6}      47.108080           0.820333                  623.0       0.1          0.1          0.1         0.1         0.10         0.40     0.60
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.4, '>5%': 0.8}      47.098934           0.817333                  612.5       0.1          0.1          0.1         0.1         0.10         0.40     0.80
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 0.6, '>5%': 1.0}      47.011505           0.894667                  363.0       0.1          0.1          0.1         0.1         0.25         0.60     1.00
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 1.0, '>5%': 1.0}      46.962907           0.715000                  574.0       0.1          0.1          0.1         0.1         0.10         1.00     1.00
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.1, '>5%': 1.25}      46.946096           0.567667                  782.0       0.1          0.1          0.1         0.1         0.10         0.10     1.25
+{'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 1.25, '>5%': 1.25}      46.929508           0.8426676                 355.5       0.1          0.1          0.1         0.1         0.25         1.25     1.25
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.1, '>5%': 1.0}      46.906922           0.565333                  784.0       0.1          0.1          0.1         0.1         0.10         0.10     1.00
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.4, '>5%': 0.4}      46.903373           0.816333                  655.0       0.1          0.1          0.1         0.1         0.10         0.40     0.40
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.4, '>5%': 1.0}      46.899163           0.811333                  611.0       0.1          0.1          0.1         0.1         0.10         0.40     1.00
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.25, '>5%': 0.4}      46.830488           0.811333                  687.0       0.1          0.1          0.1         0.1         0.10         0.25     0.40
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.25, '>5%': 0.8}      46.804046           0.810000                  652.5       0.1          0.1          0.1         0.1         0.10         0.25     0.80
+ {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 0.25, '>5%': 0.8}      46.777598           0.870000                  462.5       0.1          0.1          0.1         0.1         0.25         0.25     0.80
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 1.0, '>5%': 1.25}      46.774081           0.708667                  570.0       0.1          0.1          0.1         0.1         0.10         1.00     1.25
+ {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 1.25, '>5%': 1.25}      46.771887           0.685000                  574.0       0.1          0.1          0.1         0.1         0.10         1.25     1.25
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.6, '2.5%_5%': 1.0, '>5%': 1.0}      46.729559           0.703667                  239.0       0.1          0.1          0.1         0.1         0.60         1.00     1.00
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.25, '>5%': 0.6}      46.729081           0.815333                  665.0       0.1          0.1          0.1         0.1         0.10         0.25     0.60
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 0.4, '>5%': 0.4}      46.728166           0.891333                  444.0       0.1          0.1          0.1         0.1         0.25         0.40     0.40
+   {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.1, '2.5%_5%': 0.6, '>5%': 0.8}      46.712698           0.782667                  592.0       0.1          0.1          0.1         0.1         0.10         0.60     0.80
+ {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 1.0, '>5%': 1.25}      46.711102           0.863000                  350.0       0.1          0.1          0.1         0.1         0.25         1.00     1.25
+  {'<-7%': 0.1, '-7%_-4%': 0.1, '-4%_-2%': 0.1, '-2%_0%': 0.1, '0%_2.5%': 0.25, '2.5%_5%': 1.0, '>5%': 1.0}      46.693878           0.860000                  353.0       0.1          0.1          0.1         0.1         0.25         1.00     1.00
+Blev något fel som gjorde att -8.5% inte användes men det spelar ingen roll, att försöka få bra sannolikhet tillsammans med fart går inte här. Vi kommer gambla detta konto under någon nyhet för att kanske kunna komma 
+upp till ett bättre utgångskapital. Men fokuset kommer ligga på nya konton, där vi kommer börja med ett tvåstegskonto med basexponering på 0.75 och sedan denna nedskalningsplan:
+{
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+}.
