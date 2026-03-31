@@ -195,13 +195,13 @@ Rank 3 med:
 }
 --- FTMO PIPELINE (DayPath Bootstrap) ---
 Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
-P(Pass Challenge):    0.9405
-P(Pass Verification): 0.9057
-P(Reach 1st payout):  0.8894
+P(Pass Challenge):    0.9157
+P(Pass Verification): 0.8708
+P(Reach 1st payout):  0.8548
 --- TIME TO EVENT (days) ---
-Challenge: {'count': 18809, 'mean': 169.49476314530278, 'median': 107.0, 'p05': 28.0, 'p95': 539.0}
-Verification: {'count': 18114, 'mean': 91.8426631334879, 'median': 46.0, 'p05': 9.0, 'p95': 348.0}
-Payout: {'count': 17789, 'mean': 28.849738602507166, 'median': 15.0, 'p05': 15.0, 'p95': 93.0}
+Challenge: {'count': 18314, 'mean': 147.9897892322813, 'median': 103.0, 'p05': 28.0, 'p95': 426.0}
+Verification: {'count': 17416, 'mean': 78.64193844740468, 'median': 45.0, 'p05': 9.0, 'p95': 266.0}
+Payout: {'count': 17095, 'mean': 29.103422053231938, 'median': 15.0, 'p05': 15.0, 'p95': 94.0}
 Rank 4 med:
 {
     "<-7%": 0.4,
@@ -214,13 +214,13 @@ Rank 4 med:
 }
 --- FTMO PIPELINE (DayPath Bootstrap) ---
 Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
-P(Pass Challenge):    0.9405
-P(Pass Verification): 0.9057
-P(Reach 1st payout):  0.8936
+P(Pass Challenge):    0.9354
+P(Pass Verification): 0.8989
+P(Reach 1st payout):  0.8855
 --- TIME TO EVENT (days) ---
-Challenge: {'count': 18809, 'mean': 169.49476314530278, 'median': 107.0, 'p05': 28.0, 'p95': 539.0}
-Verification: {'count': 18114, 'mean': 91.8426631334879, 'median': 46.0, 'p05': 9.0, 'p95': 348.0}
-Payout: {'count': 17872, 'mean': 33.89833258728738, 'median': 15.0, 'p05': 15.0, 'p95': 127.0}
+Challenge: {'count': 18707, 'mean': 164.84556583097236, 'median': 105.0, 'p05': 28.0, 'p95': 526.0}
+Verification: {'count': 17977, 'mean': 88.64882905935362, 'median': 45.0, 'p05': 9.0, 'p95': 337.0}
+Payout: {'count': 17710, 'mean': 34.08102766798419, 'median': 15.0, 'p05': 15.0, 'p95': 131.0}
 Rank 9 med:
 {
     "<-7%": 0.4,
@@ -231,6 +231,15 @@ Rank 9 med:
     "2.5%_5%": 1.25,
     ">5%": 1.25,
 }
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.9429
+P(Pass Verification): 0.9096
+P(Reach 1st payout):  0.8989
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18859, 'mean': 170.80136804708627, 'median': 113.0, 'p05': 31.0, 'p95': 525.0}
+Verification: {'count': 18192, 'mean': 95.41490765171504, 'median': 52.0, 'p05': 11.0, 'p95': 343.0}
+Payout: {'count': 17978, 'mean': 32.548114361997996, 'median': 15.0, 'p05': 15.0, 'p95': 121.0}
 Rank 17 med: 
 {
     "<-7%": 0.4,
@@ -241,3 +250,136 @@ Rank 17 med:
     "2.5%_5%": 1.0,
     ">5%": 1.25,
 }
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.9456
+P(Pass Verification): 0.9110
+P(Reach 1st payout):  0.9011
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18911, 'mean': 191.88911215694569, 'median': 130.0, 'p05': 35.0, 'p95': 571.0}
+Verification: {'count': 18220, 'mean': 110.08100987925357, 'median': 61.0, 'p05': 12.0, 'p95': 387.0499999999993}
+Payout: {'count': 18022, 'mean': 34.44007324381312, 'median': 15.0, 'p05': 15.0, 'p95': 130.95000000000073}
+Rank 17 har bäst sannolikhet P(Reach 1st payout): 90.11%  men är också tydligt långsammast (ch + ver = 191 dagar. Bäst balans är rank 1, den har nästan lika bra sannolikhet som 17 P(Reach 1st payout): 89.40% men 
+har betydligt bättre fart (ch + var = 148 dagar). För ett tvåstegs funded challenge är rank 1 bäst. Vi ska även undersöka FTMOs ett stegs challenge där target och max loss är 10% och max daily loss är -3%. Därför 
+sätter vi cutoff på -2.5%. Vi kör en till bootstrap med många olika kombinationer av nedskalning för ett stegs konto också:
+--- DYNAMIC EXPOSURE OPTIMIZATION: TOP 20 ---
+                                                                                                       Config  Overall Score  P(Pass Challenge)   P(Reach 1st payout)  Challenge Median Days  Payout Median Days  Exp <-7%  Exp -7%_-4%  Exp -4%_-2%  Exp -2%_0%  Exp 0%_2.5%  Exp 2.5%_5%  Exp >5%
+ {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.8, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.176519           0.872333             0.981825                  125.0                15.0       0.4          0.4         0.80        1.25         1.25         1.25     1.25
+ {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.169993           0.807667             0.981466                  109.0                15.0       0.4          0.8         0.80        1.25         1.25         1.25     1.25
+   {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 0.8, '0%_2.5%': 1.0, '2.5%_5%': 1.25, '>5%': 1.25}       4.167154           0.818333             0.983804                  122.0                15.0       0.4          0.8         0.80        0.80         1.00         1.25     1.25
+ {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 1.0, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.166349           0.863000             0.979711                  124.0                15.0       0.4          0.4         1.00        1.25         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.163880           0.811333             0.979866                  110.0                15.0       0.4          0.8         0.80        1.00         1.25         1.25     1.25
+{'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 1.25, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.162127           0.786333             0.979698                  104.0                15.0       0.4          0.8         1.25        1.25         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.4, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.161302           0.887000             0.979468                  136.0                15.0       0.4          0.4         0.40        1.00         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.8, '-2%_0%': 0.8, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.160177           0.881000             0.978169                  130.0                15.0       0.4          0.4         0.80        0.80         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 1.0, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.160161           0.798000             0.979211                  107.5                15.0       0.4          0.8         1.00        1.00         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.8, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.160010           0.877667             0.976976                  125.0                15.0       0.4          0.4         0.80        1.00         1.25         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 1.0, '-2%_0%': 1.0, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.158616           0.870000             0.977855                  126.5                15.0       0.4          0.4         1.00        1.00         1.25         1.25     1.25
+    {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 1.0, '0%_2.5%': 1.0, '2.5%_5%': 1.0, '>5%': 1.25}       4.158005           0.812000             0.982845                  125.0                15.0       0.4          0.8         0.80        1.00         1.00         1.00     1.25
+   {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.4, '-2%_0%': 0.8, '0%_2.5%': 0.8, '2.5%_5%': 1.25, '>5%': 1.25}       4.157966           0.895000             0.981982                  155.0                15.0       0.4          0.4         0.40        0.80         0.80         1.25     1.25
+ {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 1.0, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.157729           0.796667             0.978252                  106.0                15.0       0.4          0.8         1.00        1.25         1.25         1.25     1.25
+{'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 1.25, '-2%_0%': 1.25, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.156779           0.855333             0.977461                  122.0                15.0       0.4          0.4         1.25        1.25         1.25         1.25     1.25
+    {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 0.8, '0%_2.5%': 1.0, '2.5%_5%': 1.0, '>5%': 1.25}       4.156568           0.819000             0.983396                  131.0                15.0       0.4          0.8         0.80        0.80         1.00         1.00     1.25
+   {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.8, '-2%_0%': 1.0, '0%_2.5%': 1.0, '2.5%_5%': 1.25, '>5%': 1.25}       4.155788           0.878333             0.978528                  135.0                15.0       0.4          0.4         0.80        1.00         1.00         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 0.8, '-2%_0%': 0.8, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.155422           0.816000             0.978723                  114.5                15.0       0.4          0.8         0.80        0.80         1.25         1.25     1.25
+   {'<-7%': 0.4, '-7%_-4%': 0.8, '-4%_-2%': 1.0, '-2%_0%': 1.0, '0%_2.5%': 1.0, '2.5%_5%': 1.25, '>5%': 1.25}       4.155037           0.800333             0.980517                  116.0                15.0       0.4          0.8         1.00        1.00         1.00         1.25     1.25
+  {'<-7%': 0.4, '-7%_-4%': 0.4, '-4%_-2%': 0.4, '-2%_0%': 0.8, '0%_2.5%': 1.25, '2.5%_5%': 1.25, '>5%': 1.25}       4.154300           0.891667             0.978014                  139.0                15.0       0.4          0.4         0.40        0.80         1.25         1.25     1.25
+De bästa kombinationerna för ett stegs konto liknar kombinationerna för två stegs konto, vi ser en nedskalning i djup drawdown, normal eller lite aggressiv exponering runt breakeven och ofta lite mer exponering i 
+plus. Vi kör nu full bootstrapp med 20000 iterationer på några av dessa precis som förut. Rank 1 för one_step:
+RANK1_ONE_STEP_EXPOSURE_MAP = {
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.25,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+} Topprankade i grovsökningen:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -2.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8857
+P(Reach 1st payout):  0.8552
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17713, 'mean': 210.88866933890364, 'median': 126.0, 'p05': 28.0, 'p95': 680.0}
+Payout: {'count': 17105, 'mean': 41.28465361005554, 'median': 15.0, 'p05': 15.0, 'p95': 181.0}
+RANK10_ONE_STEP_EXPOSURE_MAP = {
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+} Lite mindre aggressiv runt breakeven:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -2.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8893
+P(Reach 1st payout):  0.8629
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17787, 'mean': 208.3985495024456, 'median': 127.0, 'p05': 29.0, 'p95': 666.0}
+Payout: {'count': 17258, 'mean': 38.15088654537026, 'median': 15.0, 'p05': 15.0, 'p95': 157.0}
+RANK7_ONE_STEP_EXPOSURE_MAP = {
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.4,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+} Ännu defensivare:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -2.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8939
+P(Reach 1st payout):  0.8686
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17878, 'mean': 221.23917664168252, 'median': 136.0, 'p05': 29.0, 'p95': 695.0}
+Payout: {'count': 17372, 'mean': 40.87548929311536, 'median': 15.0, 'p05': 15.0, 'p95': 172.45000000000073}
+Av dessa tre är rank10 bäst, lite bättre sannolikhet än rank1 med bara en mer dag än rank1, nästan lika bra sannolikhet som rank7 men 9 dagar snabbare. Våran kandidat för två stegs är rank 1 som såg ut såhär:
+{
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+}
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.9405
+P(Pass Verification): 0.9057
+P(Reach 1st payout):  0.8940
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 18809, 'mean': 169.49476314530278, 'median': 107.0, 'p05': 28.0, 'p95': 539.0}
+Verification: {'count': 18114, 'mean': 91.8426631334879, 'median': 46.0, 'p05': 9.0, 'p95': 348.0}
+Payout: {'count': 17879, 'mean': 34.80653280384809, 'median': 15.0, 'p05': 15.0, 'p95': 135.0}
+Våran kandidat för ett stegs konto är rank10 som såg ut:
+RANK10_ONE_STEP_EXPOSURE_MAP = {
+    "<-7%": 0.4,
+    "-7%_-4%": 0.4,
+    "-4%_-2%": 0.8,
+    "-2%_0%": 1.0,
+    "0%_2.5%": 1.25,
+    "2.5%_5%": 1.25,
+    ">5%": 1.25,
+}
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -2.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Challenge):    0.8893
+P(Reach 1st payout):  0.8629
+--- TIME TO EVENT (days) ---
+Challenge: {'count': 17787, 'mean': 208.3985495024456, 'median': 127.0, 'p05': 29.0, 'p95': 666.0}
+Payout: {'count': 17258, 'mean': 38.15088654537026, 'median': 15.0, 'p05': 15.0, 'p95': 157.0}
+I både två-steg och ett-steg förekommer strukturen med 0.4 faktor i djup dd, 0.4-1.0 i måttlig dd, nära 1.0 runt breakeven, 1.25 i profit. Edge sitter alltså i hård skyddsreduktion i drawdown, modest uppskalning 
+i plus och inte att vara aggressiv precis under breakeven. Vilka av dessa två ska vi gå vidare med då? Vi utforskar val alternativen genom att simulera vårat existerande redan funded två-stegs konto till 
+breakeven med rank1. Vi simulerar alltså upp till breakeven från 45750 med denna exposure map, ifall vi kan få till rimlig sannolikhet och fart för detta konto kan vi välja att gå vidare med ett-stegs konto som
+är snabbare och har sannolikhet till payout över 85% vilket fortfarande är riktigt bra. 45750 konto simulation:
+--- FTMO PIPELINE (DayPath Bootstrap) ---
+Cutoff: -4.50%, Eval factor: 0.75, Funded factor: 0.75
+P(Pass Breakeven):    0.3280
+--- TIME TO EVENT (days) ---
+Breakeven: {'count': 6559, 'mean': 61.72434822381461, 'median': 53.0, 'p05': 17.0, 'p95': 132.0}
+Våldigt dålig recovery rate, men om vi kan sänka exposure tills vi når 70%+ sannolikhet och håller oss under 100 dagar är det värt att gå vidare med ett två-stegs konto samtidigt som detta konto ska köras. Vi 
+testar dessa nedskalningsfaktorer i en optimerings bootstrapp:
+candidate_values = [0.10, 0.25, 0.40, 0.60, 0.80, 1.00, 1.25] och sen lägger vi även in en till bucket på <-8.5%:
+bucket_order = ["<-8.5%", "-8.5%_-7%", "-7%_-4%", "-4%_-2%", "-2%_0%", "0%_2.5%", "2.5%_5%", ">5%"]
