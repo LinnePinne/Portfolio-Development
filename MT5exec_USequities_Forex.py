@@ -18,9 +18,9 @@ class ExecConfig:
     retries: int = 5
     retry_sleep_sec: float = 0.5
     min_margin_level: float = 150.0
-    log_csv_path: str = "trade_log.csv"
-    event_log_csv_path: str = "execution_events.csv"
-    lifecycle_log_csv_path: str = "trade_lifecycle.csv"
+    log_csv_path: str = "logs/trade_log.csv"
+    event_log_csv_path: str = "logs/execution_events.csv"
+    lifecycle_log_csv_path: str = "logs/trade_lifecycle.csv"
     max_tick_age_sec_fx: int = 10
     max_tick_age_sec_index: int = 20
 
