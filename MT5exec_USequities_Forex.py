@@ -19,6 +19,10 @@ class ExecConfig:
     retry_sleep_sec: float = 0.5
     min_margin_level: float = 150.0
     log_csv_path: str = "trade_log.csv"
+    event_log_csv_path: str = "execution_events.csv"
+    lifecycle_log_csv_path: str = "trade_lifecycle.csv"
+    max_tick_age_sec_fx: int = 10
+    max_tick_age_sec_index: int = 20
 
 
 @dataclass
@@ -68,6 +72,54 @@ def ensure_initialized():
     if acc is None:
         raise RuntimeError("MT5 account_info() failed")
 
+def mt5_healthcheck() -> Tuple[bool, str]:
+    """
+    Basic MT5 health check:
+    - terminal connected
+    - account info available
+    """
+    try:
+        term = mt5.terminal_info()
+        if term is None:
+            return False, "terminal_info_none"
+
+        acc = mt5.account_info()
+        if acc is None:
+            return False, "account_info_none"
+
+        connected = getattr(term, "connected", None)
+        if connected is False:
+            return False, "terminal_disconnected"
+
+        trade_allowed = getattr(term, "trade_allowed", None)
+        if trade_allowed is False:
+            return False, "terminal_trade_not_allowed"
+
+        return True, "ok"
+
+    except Exception as e:
+        return False, f"healthcheck_exception:{e}"
+
+def reconnect_mt5(pause_sec: float = 2.0) -> bool:
+    """
+    Hard reconnect attempt.
+    """
+    try:
+        mt5.shutdown()
+    except Exception:
+        pass
+
+    time.sleep(pause_sec)
+
+    try:
+        ok = mt5.initialize()
+        if not ok:
+            return False
+
+        acc = mt5.account_info()
+        return acc is not None
+    except Exception:
+        return False
 
 def ensure_symbol(symbol: str) -> SymbolMeta:
     if not mt5.symbol_select(symbol, True):
@@ -90,6 +142,31 @@ def ensure_symbol(symbol: str) -> SymbolMeta:
         currency_margin=str(getattr(info, "currency_margin", "") or ""),
     )
 
+def _symbol_max_tick_age_sec(cfg: ExecConfig, symbol: str) -> int:
+    if symbol.endswith(".cash"):
+        return int(cfg.max_tick_age_sec_index)
+    return int(cfg.max_tick_age_sec_fx)
+
+
+def tick_age_seconds(symbol: str) -> Optional[float]:
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        return None
+
+    tick_ts = getattr(tick, "time", None)
+    if tick_ts is None:
+        return None
+
+    return max(0.0, time.time() - float(tick_ts))
+
+
+def tick_is_fresh(cfg: ExecConfig, symbol: str) -> Tuple[bool, Optional[float], Optional[float]]:
+    age = tick_age_seconds(symbol)
+    if age is None:
+        return False, None, None
+
+    max_age = float(_symbol_max_tick_age_sec(cfg, symbol))
+    return age <= max_age, age, max_age
 
 def _mid_price(symbol: str) -> Optional[float]:
     tick = mt5.symbol_info_tick(symbol)
@@ -142,6 +219,33 @@ def current_spread(symbol: str) -> float:
 def max_allowed_spread(symbol: str) -> Optional[float]:
     return MAX_SPREAD_BY_SYMBOL.get(symbol)
 
+SYMBOL_EXECUTION_CONFIG = {
+    "US500.cash": {"deviation_points": 80, "retries": 5, "retry_sleep_sec": 0.5},
+    "US100.cash": {"deviation_points": 120, "retries": 5, "retry_sleep_sec": 0.5},
+    "US30.cash":  {"deviation_points": 180, "retries": 5, "retry_sleep_sec": 0.5},
+
+    "EURJPY": {"deviation_points": 30, "retries": 4, "retry_sleep_sec": 0.35},
+    "GBPJPY": {"deviation_points": 35, "retries": 4, "retry_sleep_sec": 0.35},
+    "USDJPY": {"deviation_points": 25, "retries": 4, "retry_sleep_sec": 0.35},
+
+    "EURCHF": {"deviation_points": 20, "retries": 4, "retry_sleep_sec": 0.35},
+    "EURCAD": {"deviation_points": 25, "retries": 4, "retry_sleep_sec": 0.35},
+    "GBPCHF": {"deviation_points": 25, "retries": 4, "retry_sleep_sec": 0.35},
+    "EURUSD": {"deviation_points": 15, "retries": 4, "retry_sleep_sec": 0.25},
+    "USDCHF": {"deviation_points": 20, "retries": 4, "retry_sleep_sec": 0.25},
+}
+
+def execution_params_for_symbol(cfg: ExecConfig, symbol: str) -> Dict:
+    base = {
+        "deviation_points": cfg.deviation_points,
+        "retries": cfg.retries,
+        "retry_sleep_sec": cfg.retry_sleep_sec,
+        "order_filling": cfg.order_filling,
+    }
+
+    override = SYMBOL_EXECUTION_CONFIG.get(symbol, {})
+    base.update(override)
+    return base
 
 def spread_guard_ok(symbol: str) -> bool:
     max_spread = max_allowed_spread(symbol)
@@ -172,6 +276,39 @@ def account_snapshot() -> Dict[str, float]:
 # ==========================
 # LOGGING
 # ==========================
+def append_trade_lifecycle_log(cfg: ExecConfig, row: Dict):
+    fieldnames = [
+        "ts",
+        "strategy",
+        "market",
+        "symbol",
+        "magic",
+        "direction",
+        "entry_time",
+        "exit_time",
+        "holding_seconds",
+        "entry_price",
+        "exit_price",
+        "volume",
+        "pnl",
+        "exit_reason",
+    ]
+
+    file_exists = False
+    try:
+        with open(cfg.lifecycle_log_csv_path, "r", encoding="utf-8"):
+            file_exists = True
+    except Exception:
+        pass
+
+    with open(cfg.lifecycle_log_csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        if not file_exists:
+            writer.writeheader()
+
+        safe_row = {k: row.get(k, "") for k in fieldnames}
+        writer.writerow(safe_row)
 
 def append_trade_log(cfg: ExecConfig, row: Dict):
     fieldnames = [
@@ -184,6 +321,9 @@ def append_trade_log(cfg: ExecConfig, row: Dict):
         "comment",
         "price",
         "retcode",
+        "order",
+        "deal",
+        "spread",
     ]
 
     file_exists = False
@@ -202,15 +342,72 @@ def append_trade_log(cfg: ExecConfig, row: Dict):
         safe_row = {k: row.get(k, "") for k in fieldnames}
         writer.writerow(safe_row)
 
+def append_execution_event(cfg: ExecConfig, row: Dict):
+    fieldnames = [
+        "ts",
+        "event_type",
+        "symbol",
+        "side",
+        "volume",
+        "magic",
+        "comment",
+        "attempt",
+        "requested_price",
+        "fill_price",
+        "spread",
+        "retcode",
+        "order",
+        "deal",
+        "position_ticket",
+        "exception",
+        "bid",
+        "ask",
+    ]
+
+    file_exists = False
+    try:
+        with open(cfg.event_log_csv_path, "r", encoding="utf-8"):
+            file_exists = True
+    except Exception:
+        pass
+
+    with open(cfg.event_log_csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        if not file_exists:
+            writer.writeheader()
+
+        safe_row = {k: row.get(k, "") for k in fieldnames}
+        writer.writerow(safe_row)
 
 # ==========================
 # POSITION HELPERS
 # ==========================
+def get_positions_by_magic(symbol: str, magic: int):
+    pos = mt5.positions_get(symbol=symbol)
+    if pos is None:
+        return []
 
-def get_positions(symbol: Optional[str] = None):
-    if symbol:
-        return mt5.positions_get(symbol=symbol)
-    return mt5.positions_get()
+    out = []
+    for p in pos:
+        if int(p.magic) == int(magic):
+            out.append(p)
+
+    return out
+
+def get_position(symbol: str, magic: int):
+    matches = get_positions_by_magic(symbol, magic)
+
+    if not matches:
+        return None
+
+    if len(matches) > 1:
+        print(
+            f"[{_ts()}] WARNING multiple positions found "
+            f"symbol={symbol} magic={magic} count={len(matches)}"
+        )
+
+    return matches[0]
 
 
 def get_position(symbol: str, magic: int):
@@ -229,6 +426,33 @@ def get_position(symbol: str, magic: int):
 # ==========================
 # SIZING
 # ==========================
+def position_usd_notional(position) -> float:
+    """
+    Approx current USD notional for an open MT5 position.
+    Uses the same logic as entry sizing.
+    """
+    symbol = str(position.symbol)
+    volume = float(position.volume)
+
+    meta = ensure_symbol(symbol)
+
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        # fallback to position price_open if live tick is unavailable
+        price = float(getattr(position, "price_open", 0.0) or 0.0)
+    else:
+        bid = float(tick.bid)
+        ask = float(tick.ask)
+        if bid > 0 and ask > 0:
+            price = (bid + ask) / 2.0
+        else:
+            price = float(getattr(position, "price_open", 0.0) or 0.0)
+
+    if price <= 0:
+        return 0.0
+
+    per_lot = usd_notional_per_lot(symbol, meta, price)
+    return abs(per_lot * volume)
 
 def round_volume(meta: SymbolMeta, volume: float) -> float:
     if volume <= 0:
@@ -333,8 +557,42 @@ def send_market_order(
     volume = round_volume(meta, volume)
 
     if volume <= 0:
+        append_execution_event(cfg, {
+            "ts": _ts(),
+            "event_type": "ORDER_SKIPPED_ZERO_VOLUME",
+            "symbol": symbol,
+            "side": side,
+            "volume": volume,
+            "magic": magic,
+            "comment": comment,
+            "position_ticket": position_ticket,
+        })
         print(f"[{_ts()}] ORDER SKIP volume<=0 symbol={symbol} side={side}")
         return False
+
+    fresh_ok, tick_age, max_tick_age = tick_is_fresh(cfg, symbol)
+    if not fresh_ok:
+        append_execution_event(cfg, {
+            "ts": _ts(),
+            "event_type": "STALE_TICK_BLOCK",
+            "symbol": symbol,
+            "side": side,
+            "volume": volume,
+            "magic": magic,
+            "comment": comment,
+            "position_ticket": position_ticket,
+            "exception": f"tick_age={tick_age}, max_tick_age={max_tick_age}",
+        })
+        print(
+            f"[{_ts()}] STALE TICK BLOCK "
+            f"symbol={symbol} tick_age={tick_age} max_allowed={max_tick_age}"
+        )
+        return False
+
+    tick0 = mt5.symbol_info_tick(symbol)
+    bid0 = float(tick0.bid) if tick0 else None
+    ask0 = float(tick0.ask) if tick0 else None
+    spread0 = (ask0 - bid0) if (bid0 is not None and ask0 is not None) else None
 
     if enforce_spread_guard:
         max_spread = max_allowed_spread(symbol)
@@ -342,10 +600,37 @@ def send_market_order(
             try:
                 spr = current_spread(symbol)
             except Exception as e:
+                append_execution_event(cfg, {
+                    "ts": _ts(),
+                    "event_type": "SPREAD_GUARD_ERROR",
+                    "symbol": symbol,
+                    "side": side,
+                    "volume": volume,
+                    "magic": magic,
+                    "comment": comment,
+                    "position_ticket": position_ticket,
+                    "exception": str(e),
+                    "bid": bid0,
+                    "ask": ask0,
+                    "spread": spread0,
+                })
                 print(f"[SPREAD GUARD ERROR] symbol={symbol} err={e}")
                 return False
 
             if spr > float(max_spread):
+                append_execution_event(cfg, {
+                    "ts": _ts(),
+                    "event_type": "SPREAD_BLOCK",
+                    "symbol": symbol,
+                    "side": side,
+                    "volume": volume,
+                    "magic": magic,
+                    "comment": comment,
+                    "position_ticket": position_ticket,
+                    "spread": spr,
+                    "bid": bid0,
+                    "ask": ask0,
+                })
                 print(
                     f"[SPREAD GUARD] blocked order "
                     f"symbol={symbol} spread={spr:.6f} max={float(max_spread):.6f} "
@@ -353,9 +638,31 @@ def send_market_order(
                 )
                 return False
 
-    for attempt in range(cfg.retries):
+    exec_params = execution_params_for_symbol(cfg, symbol)
+    deviation_points = int(exec_params["deviation_points"])
+    retries = int(exec_params["retries"])
+    retry_sleep_sec = float(exec_params["retry_sleep_sec"])
+    order_filling = int(exec_params["order_filling"])
+
+    for attempt in range(1, retries + 1):
         try:
             price = _price(symbol, side)
+
+            append_execution_event(cfg, {
+                "ts": _ts(),
+                "event_type": "ORDER_ATTEMPT",
+                "symbol": symbol,
+                "side": side,
+                "volume": volume,
+                "magic": magic,
+                "comment": comment,
+                "attempt": attempt,
+                "requested_price": price,
+                "spread": spread0,
+                "position_ticket": position_ticket,
+                "bid": bid0,
+                "ask": ask0,
+            })
 
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
@@ -363,25 +670,64 @@ def send_market_order(
                 "volume": volume,
                 "type": _order_type(side),
                 "price": price,
-                "deviation": cfg.deviation_points,
+                "deviation": deviation_points,
                 "magic": magic,
                 "comment": comment[:30],
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": cfg.order_filling,
+                "type_filling": order_filling,
             }
 
-            # Important for hedging accounts / explicit close
             if position_ticket is not None:
                 request["position"] = int(position_ticket)
 
             result = mt5.order_send(request)
 
             if result is None:
-                print(f"[{_ts()}] order_send returned None symbol={symbol} side={side} attempt={attempt+1}")
-                time.sleep(cfg.retry_sleep_sec)
+                append_execution_event(cfg, {
+                    "ts": _ts(),
+                    "event_type": "ORDER_SEND_NONE",
+                    "symbol": symbol,
+                    "side": side,
+                    "volume": volume,
+                    "magic": magic,
+                    "comment": comment,
+                    "attempt": attempt,
+                    "requested_price": price,
+                    "position_ticket": position_ticket,
+                    "bid": bid0,
+                    "ask": ask0,
+                    "spread": spread0,
+                })
+                print(f"[{_ts()}] order_send returned None symbol={symbol} side={side} attempt={attempt}")
+                time.sleep(retry_sleep_sec)
                 continue
 
+            fill_price = float(getattr(result, "price", 0.0) or 0.0)
+            order_id = getattr(result, "order", "")
+            deal_id = getattr(result, "deal", "")
+            retcode = getattr(result, "retcode", "")
+
             if result.retcode == mt5.TRADE_RETCODE_DONE:
+                append_execution_event(cfg, {
+                    "ts": _ts(),
+                    "event_type": "ORDER_FILLED",
+                    "symbol": symbol,
+                    "side": side,
+                    "volume": volume,
+                    "magic": magic,
+                    "comment": comment,
+                    "attempt": attempt,
+                    "requested_price": price,
+                    "fill_price": fill_price,
+                    "spread": spread0,
+                    "retcode": retcode,
+                    "order": order_id,
+                    "deal": deal_id,
+                    "position_ticket": position_ticket,
+                    "bid": bid0,
+                    "ask": ask0,
+                })
+
                 append_trade_log(cfg, {
                     "ts": _ts(),
                     "symbol": symbol,
@@ -390,23 +736,60 @@ def send_market_order(
                     "magic": magic,
                     "ticket": position_ticket,
                     "comment": comment,
-                    "price": price,
-                    "retcode": result.retcode,
+                    "price": fill_price if fill_price > 0 else price,
+                    "retcode": retcode,
+                    "order": order_id,
+                    "deal": deal_id,
+                    "spread": spread0,
                 })
                 return True
 
+            append_execution_event(cfg, {
+                "ts": _ts(),
+                "event_type": "ORDER_REJECTED",
+                "symbol": symbol,
+                "side": side,
+                "volume": volume,
+                "magic": magic,
+                "comment": comment,
+                "attempt": attempt,
+                "requested_price": price,
+                "fill_price": fill_price,
+                "spread": spread0,
+                "retcode": retcode,
+                "order": order_id,
+                "deal": deal_id,
+                "position_ticket": position_ticket,
+                "bid": bid0,
+                "ask": ask0,
+            })
+
             print(
                 f"[{_ts()}] ORDER FAIL symbol={symbol} side={side} volume={volume:.4f} "
-                f"retcode={result.retcode} comment={comment} attempt={attempt+1}"
+                f"retcode={result.retcode} comment={comment} attempt={attempt}"
             )
 
         except Exception as e:
+            append_execution_event(cfg, {
+                "ts": _ts(),
+                "event_type": "ORDER_EXCEPTION",
+                "symbol": symbol,
+                "side": side,
+                "volume": volume,
+                "magic": magic,
+                "comment": comment,
+                "attempt": attempt,
+                "position_ticket": position_ticket,
+                "exception": str(e),
+                "bid": bid0,
+                "ask": ask0,
+                "spread": spread0,
+            })
             print(f"[{_ts()}] ORDER EXCEPTION symbol={symbol} side={side} err={e}")
 
-        time.sleep(cfg.retry_sleep_sec)
+        time.sleep(retry_sleep_sec)
 
     return False
-
 
 # ==========================
 # CLOSE POSITION (SAFE)
