@@ -421,4 +421,35 @@ upp till ett bättre utgångskapital. Men fokuset kommer ligga på nya konton, d
 positionerna manuellt. Men för att skydda oss från detta i framtiden ska vi implementera ett spread skydd i mt5.exec. Skyddet ska blocka entries när spread är för hög för att sedan tillåta entry efter att
 spread har normaliserats. Den ska också blocka entries ifall pris stuckit iväg enormt mycket från signal priset, detta ska fungera som skydd mot stora nyhetsevent. "Prisörelse-skyddet" kommer behövas lägga 
 in i liveboten istället för mt5.exec eftersom skyddet måste veta var signalen uppstod, vilket pris som är för långt bort, om det är breakout eller mean reversion, vilken strategi det är. mt5.exec håller 
-bara koll på volym, symbol, sida och order, därför platsar spread skydd in i den. Vi låter exits ignorera spreadguarden, så den användas endast av entries.
+bara koll på volym, symbol, sida och order, därför platsar spread skydd in i den. Vi låter exits ignorera spreadguarden, så den användas endast av entries. 
+Nu har vi lagt in dessa skydd. Men det finns fortfarande en hel del förbättringar som måste göras. Enligt vår AI-assistent är det många grejer vi bör lägga till för att boten ska fungera så bra som möjligt:
+Prioritet 1:
+- Fixa gross exposure-beräkningen, den beräknar tydligen cap fel så den skyddar inte rätt, vi kan alltså få större exponering än vad vi vill.
+- Gör risk flatten retry-safe tills allt verkligen är stängt, ifall close failar markerar vi just nu ändå dagen som flattened direkt. Men vi bör ha logik som först försöker stänga allt och sedan verifierar
+att allt är stängt och om något är kvar så ska den fortsätta försöka stänga varje loop.
+- Bygg riktig order/trade logging. Just nu loggar vi bara lyckade trades med väldigt lite data dessutom. Vi vill ogga alla försök, success, failure, spread blocks, exceptions, order-id, spread, attempt, 
+requested fill. Vi loggar bills och genomförda orders i trade_log.csv och hela execution flödet loggar vi i execution_events.csv
+- Lägg single-instance lock. Vi vill vara säkra på att två live_bot proccesser inte körs samtidigt så vi lägger in en lockfil i live_bot
+Nu har vi fixat allt detta. Efter dessa ändringar kommer boten att räkna gross exposure mycket mer korrekt, inte “tro” att flatten lyckades när den inte gjorde det, logga alla viktiga orderhändelser, 
+skydda sig mot dubbla processer och minska risken för korrupt state-fil.
+Prioritet 2:
+- Lägg reconnect + health checks. Just nu kör vi bara ensure_initialized() vi start, om terminalen tappar kontakt eller om mt5-API:t börjar svara dåligt så fortsätter boten till något kraschar. Istället borde 
+varje loop känna om mt5 är friskt och försöka återansluta om det inte är det, blockera entries när anslutningen är dålig, ändå försöka flattena om risk kräver det.
+- Lägg stale tick guard, även om tick finns kan den vara gammal. Vi vill inte skicka order på stängd marknad, frozen quote eller laggad terminal.
+- Boot reconciliation. Idag läser vi state från disk, men det verifierar inte att state faktiskt matchar verkligheten hos broker. Vi vill kunna upptäcka om det finns flera positioner på samma (symbol, magic),
+om öppna botpositioner finns kvar från tidigare session, processed-bar state kanske är gammal, state från del datum.
+- Bättre felhantering med en enkel circuit breaker. Helt enkelt om det blir för många failures så stoppas entries. Om boten får många exceptions i rad ska nya entries stoppas temporärt, fortsätta köra risk c
+check och flatten, undvika att spam skicka ordrar i dåligt läge.
+- En liten uppdatering av market data fetchin. Ibland kan mt5 returnera tomma eller dåliga data, då är det bra att logga varför symboler hoppas över.
+Efter dessa ändringar kommer boten att bli mycket mer live-robust, den märker när MT5 tappat kontakt, den försöker reconnecta automatiskt. Den blockerar orders på stale ticks, den gör grundläggande sanity-check 
+vid restart, den stoppar entries tillfälligt om systemet börjar kasta många fel, den loggar driftproblem tydligare.
+Prioritet 3:
+- Gör sessions/tidszoner explicita. Om lokal maskintid, borker-server tid och strategi-tid inte är samma kan det bli fel i daily reset, vwap reset, asia range och sessionsfönser. Vi vill ha en canonical timezone
+som boten använder för allt. Enklaste sättet är att välja broker server time som intern referens eftersom mt5 bars normalt följer den.
+- Bar driven execution, vi hämtar just nu data varje sekund, varje strategi kör full logik varje loop, detta blir väldigt tungt. Vi vill bara köra relevant logik när relevant bar faktiskt har stängt och låte risk
+skydden köras varje sekund.
+- Trade lifecycle-logg per färdig trade. Just nu loggar vi orders. Men ni vill också logga hela traden från entry till exit. 
+- Symbolspecifik execution config. Vi har samma deviation_points, order filling och retries för allt. Det är bättre om vi har olika för index, forex och kanske enskilda symboler.
+- Cooldown efter exit + max entries per dag. Bra skydd för flip-flop, buggar, entries direkt efter exit i samma bar, överaktivitet.
+Nu har vi gjort även prioritet 3 och då får vi tydligare och mer konsekvent tidslogik, betydligt mindre CPU-/API-brus tack vare bar-driven execution, bättre analysmöjlighet via trade_lifecycle.csv, bättre 
+execution-tuning per symbol, skydd mot övertrading och same-bar reentries.
