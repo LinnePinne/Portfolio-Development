@@ -417,3 +417,8 @@ upp till ett bättre utgångskapital. Men fokuset kommer ligga på nya konton, d
     "2.5%_5%": 1.25,
     ">5%": 1.25,
 }.
+(2026-04-02) Nu körs denna portfölj. Inatt upptäcktes ett problem, det blev jättehög spread klockan 01:00 för vissa forex par samtidigt som det uppstod mr_fx signal. Som tur var såg vi detta och stängde 
+positionerna manuellt. Men för att skydda oss från detta i framtiden ska vi implementera ett spread skydd i mt5.exec. Skyddet ska blocka entries när spread är för hög för att sedan tillåta entry efter att
+spread har normaliserats. Den ska också blocka entries ifall pris stuckit iväg enormt mycket från signal priset, detta ska fungera som skydd mot stora nyhetsevent. "Prisörelse-skyddet" kommer behövas lägga 
+in i liveboten istället för mt5.exec eftersom skyddet måste veta var signalen uppstod, vilket pris som är för långt bort, om det är breakout eller mean reversion, vilken strategi det är. mt5.exec håller 
+bara koll på volym, symbol, sida och order, därför platsar spread skydd in i den. Vi låter exits ignorera spreadguarden, så den användas endast av entries.
