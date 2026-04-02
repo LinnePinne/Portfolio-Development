@@ -34,7 +34,24 @@ class SymbolMeta:
     currency_profit: str
     currency_margin: str
 
+MAX_SPREAD_BY_SYMBOL = {
+    # Indices
+    "US500.cash": 1.5,
+    "US100.cash": 3.0,
+    "US30.cash": 8.0,
 
+    # TF_FX
+    "EURJPY": 0.03,
+    "GBPJPY": 0.05,
+    "USDJPY": 0.03,
+
+    # MR_FX
+    "EURCHF": 0.00025,
+    "EURCAD": 0.00035,
+    "GBPCHF": 0.00035,
+    "EURUSD": 0.00020,
+    "USDCHF": 0.00020,
+}
 # ==========================
 # UTILS
 # ==========================
@@ -111,6 +128,28 @@ def _fx_rate_to_usd(ccy: str) -> Optional[float]:
 
     return None
 
+# ==========================
+# SPREAD GUARD
+# ==========================
+
+def current_spread(symbol: str) -> float:
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        raise RuntimeError(f"No tick for symbol: {symbol}")
+    return float(tick.ask) - float(tick.bid)
+
+
+def max_allowed_spread(symbol: str) -> Optional[float]:
+    return MAX_SPREAD_BY_SYMBOL.get(symbol)
+
+
+def spread_guard_ok(symbol: str) -> bool:
+    max_spread = max_allowed_spread(symbol)
+    if max_spread is None:
+        return True
+
+    spr = current_spread(symbol)
+    return spr <= float(max_spread)
 
 # ==========================
 # ACCOUNT
@@ -286,7 +325,9 @@ def send_market_order(
     cfg: ExecConfig,
     comment: str = "",
     position_ticket: Optional[int] = None,
+    enforce_spread_guard: bool = True,
 ) -> bool:
+
     side = side.upper()
     meta = ensure_symbol(symbol)
     volume = round_volume(meta, volume)
@@ -294,6 +335,23 @@ def send_market_order(
     if volume <= 0:
         print(f"[{_ts()}] ORDER SKIP volume<=0 symbol={symbol} side={side}")
         return False
+
+    if enforce_spread_guard:
+        max_spread = max_allowed_spread(symbol)
+        if max_spread is not None:
+            try:
+                spr = current_spread(symbol)
+            except Exception as e:
+                print(f"[SPREAD GUARD ERROR] symbol={symbol} err={e}")
+                return False
+
+            if spr > float(max_spread):
+                print(
+                    f"[SPREAD GUARD] blocked order "
+                    f"symbol={symbol} spread={spr:.6f} max={float(max_spread):.6f} "
+                    f"comment={comment}"
+                )
+                return False
 
     for attempt in range(cfg.retries):
         try:
@@ -383,6 +441,7 @@ def close_position_market(
         cfg=cfg,
         comment=comment,
         position_ticket=ticket,
+        enforce_spread_guard=False,
     )
 
     return ok
@@ -416,6 +475,7 @@ def close_all_positions(cfg: ExecConfig):
             cfg=cfg,
             comment="PANIC_CLOSE",
             position_ticket=ticket,
+            enforce_spread_guard=False,
         )
 
 
@@ -464,6 +524,7 @@ def open_long_by_notional(
         magic=magic,
         cfg=cfg,
         comment=comment,
+        enforce_spread_guard=True,
     )
 
     return ok, volume
@@ -498,6 +559,7 @@ def open_short_by_notional(
         magic=magic,
         cfg=cfg,
         comment=comment,
+        enforce_spread_guard=True,
     )
 
     return ok, volume
