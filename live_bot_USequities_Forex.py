@@ -134,6 +134,31 @@ DYNAMIC_EXPOSURE_MAP = {
     ">5%": 1.25,
 }
 
+MAX_ENTRY_DRIFT = {
+    "TF_EQ": {
+        "US500": 8.0,
+        "US100": 25.0,
+        "US30": 70.0,
+    },
+    "MR_EQ": {
+        "US500": 8.0,
+        "US100": 25.0,
+        "US30": 70.0,
+    },
+    "TF_FX": {
+        "EURJPY": 0.12,
+        "GBPJPY": 0.18,
+        "USDJPY": 0.10,
+    },
+    "MR_FX": {
+        "EURCHF": 0.0008,
+        "EURCAD": 0.0012,
+        "GBPCHF": 0.0012,
+        "EURUSD": 0.0008,
+        "USDCHF": 0.0008,
+    },
+}
+
 TF_EQ_PARAMS = dict(
     exit_confirm_bars=10,
     adx_threshold=15,
@@ -295,6 +320,40 @@ def position_direction(pos) -> Optional[str]:
         return "SHORT"
     return None
 
+def current_entry_side_price(symbol: str, signal: str) -> Optional[float]:
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        return None
+
+    if signal == "LONG":
+        return float(tick.ask)
+    return float(tick.bid)
+
+
+def entry_drift_ok(
+    strategy: str,
+    market: str,
+    symbol: str,
+    signal: str,
+    signal_price: float,
+) -> Tuple[bool, Optional[float], Optional[float]]:
+    """
+    Returnerar:
+      ok, current_price, max_drift
+
+    signal_price = prisnivån när signalen observerades
+    current_price = faktisk live entry-side price just nu
+    """
+    current_price = current_entry_side_price(symbol, signal)
+    if current_price is None:
+        return False, None, None
+
+    max_drift = MAX_ENTRY_DRIFT.get(strategy, {}).get(market)
+    if max_drift is None:
+        return True, current_price, None
+
+    ok = abs(float(current_price) - float(signal_price)) <= float(max_drift)
+    return ok, float(current_price), float(max_drift)
 
 def pct_rank_last(x):
     s = pd.Series(x)
@@ -908,6 +967,22 @@ def run_tf_eq(cfg, state, allow_entries):
             continue
 
         if tf_eq_entry(prev, prev2):
+            signal_price = float(prev["close"])
+            drift_ok, current_px, max_drift = entry_drift_ok(
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                signal="LONG",
+                signal_price=signal_price,
+            )
+
+            if not drift_ok:
+                print(
+                    f"[{now_str()}] TF_EQ {name} entry blocked by drift guard "
+                    f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+                )
+                continue
+                
             regime = get_cached_market_regime(state, name, sym)
             base_notional, adj_notional = overlay_info("TF_EQ", name, regime, equity)
             notional = min(adj_notional, capacity)
@@ -962,6 +1037,23 @@ def run_mr_eq(cfg, state, allow_entries):
             continue
 
         if mr_eq_entry(prev):
+            signal_price = float(prev["close"])
+            drift_ok, current_px, max_drift = entry_drift_ok(
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                signal="LONG",
+                signal_price=signal_price,
+            )
+
+            if not drift_ok:
+                print(
+                    f"[{now_str()}] MR_EQ {name} entry blocked by drift guard "
+                    f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+                )
+                mr_eq_processed[name] = bar_id
+                continue
+                
             regime = get_cached_market_regime(state, name, sym)
             base_notional, adj_notional = overlay_info("MR_EQ", name, regime, equity)
             notional = min(adj_notional, capacity)
@@ -1024,6 +1116,23 @@ def run_tf_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
+        signal_price = float(prev["close"])
+        drift_ok, current_px, max_drift = entry_drift_ok(
+            strategy="TF_FX",
+            market=name,
+            symbol=sym,
+            signal=signal,
+            signal_price=signal_price,
+        )
+
+        if not drift_ok:
+            print(
+                f"[{now_str()}] TF_FX {name} entry blocked by drift guard "
+                f"signal={signal} signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+            )
+            processed[name] = bar_id
+            continue
+        
         regime = get_cached_market_regime(state, name, sym)
         base_notional, adj_notional = overlay_info("TF_FX", name, regime, equity)
         notional = min(adj_notional, capacity)
@@ -1091,6 +1200,23 @@ def run_mr_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
+        signal_price = float(prev["close"])
+        drift_ok, current_px, max_drift = entry_drift_ok(
+            strategy="MR_FX",
+            market=name,
+            symbol=sym,
+            signal=signal,
+            signal_price=signal_price,
+        )
+
+        if not drift_ok:
+            print(
+                f"[{now_str()}] MR_FX {name} entry blocked by drift guard "
+                f"signal={signal} signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+            )
+            processed[name] = bar_id
+            continue
+        
         regime = get_cached_market_regime(state, name, sym)
         base_notional, adj_notional = overlay_info("MR_FX", name, regime, equity)
         notional = min(adj_notional, capacity)
