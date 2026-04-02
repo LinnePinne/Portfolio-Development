@@ -700,7 +700,17 @@ def compute_session_anchored_vwap_and_std(data: pd.DataFrame, vol_col: str, rese
 
     return vwap, std
 
-
+def ensure_log_dirs(cfg):
+    import os
+    for path in [
+        cfg.log_csv_path,
+        cfg.event_log_csv_path,
+        cfg.lifecycle_log_csv_path,
+    ]:
+        d = os.path.dirname(path)
+        if d and not os.path.exists(d):
+            os.makedirs(d, exist_ok=True)
+            
 # ==========================
 # INDICATORS
 # ==========================
@@ -1659,7 +1669,16 @@ def main():
     acquire_lock_or_die()
     ensure_initialized()
 
-    cfg = ExecConfig()
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    cfg = ExecConfig(
+    log_csv_path=os.path.join(BASE_DIR, "logs/trade_log.csv"),
+    event_log_csv_path=os.path.join(BASE_DIR, "logs/execution_events.csv"),
+    lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
+    )
+
+    ensure_log_dirs(cfg)   # ← viktigt att du har denna också
+    
     state = load_state()
 
     state.setdefault("day_start_equity", None)
