@@ -13,7 +13,7 @@ import pandas as pd
 import ta
 import MetaTrader5 as mt5
 
-from mt5_exec import (
+from MT5exec_USequities_Forex import (
     ExecConfig,
     ensure_initialized,
     ensure_symbol,
@@ -180,7 +180,7 @@ MR_EQ_PARAMS = dict(
     ema_slow_len=250,
     pullback_frac=0.20,
 )
-# All session times below are interpreted in broker/server time.
+
 TF_FX_PARAMS = dict(
     session_start="08:00:00",
     session_end="09:00:00",
@@ -208,6 +208,8 @@ LOCK_FILE = "live_bot.lock"
 
 MAX_ENTRIES_PER_SYMBOL_PER_DAY = 3
 BLOCK_REENTRY_ON_SAME_BAR = True
+
+debug = False
 # ==========================
 # STATE
 # ==========================
@@ -280,7 +282,8 @@ def fetch_ohlc(symbol, tf, n, min_bars=120):
     df = pd.DataFrame(rates)
     df["time"] = pd.to_datetime(df["time"], unit="s")
     df = df.set_index("time")
-
+    #print(df.tail(3).index)
+    
     cols = ["open", "high", "low", "close"]
     if "tick_volume" in df.columns:
         cols.append("tick_volume")
@@ -290,7 +293,6 @@ def fetch_ohlc(symbol, tf, n, min_bars=120):
         cols.append("spread")
 
     return df[cols].copy()
-
 
 def last_closed_bar(df):
     return df.iloc[-2]
@@ -1186,14 +1188,14 @@ def risk_gate(state, snap, cfg=None):
     if equity <= max_floor:
         must_flatten = True
         allow_entries = False
-
-    print(
-        f"[RISK] balance={balance:.2f} equity={equity:.2f} "
-        f"day_start_balance={day_start_balance:.2f} "
-        f"peak_balance_ref={ref_balance:.2f} "
-        f"soft_floor={soft_floor:.2f} max_floor={max_floor:.2f} "
-        f"allow_entries={allow_entries} must_flatten={must_flatten}"
-    )
+    if debug:
+        print(
+            f"[RISK] balance={balance:.2f} equity={equity:.2f} "
+            f"day_start_balance={day_start_balance:.2f} "
+            f"peak_balance_ref={ref_balance:.2f} "
+            f"soft_floor={soft_floor:.2f} max_floor={max_floor:.2f} "
+            f"allow_entries={allow_entries} must_flatten={must_flatten}"
+        )
 
     return allow_entries, must_flatten
 
@@ -1270,13 +1272,6 @@ def run_tf_eq(cfg, state, allow_entries):
         prev2 = prev_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
         print(f"prev bar timestamp = {prev.name}")
-        def sweden_now():
-            return datetime.now(ZoneInfo("Europe/Stockholm"))
-        print(
-            f"SWEDEN_NOW={sweden_now()} "
-            f"BOT_NOW={now_str()} "
-            f"PREV_BAR={prev.name}"
-        )
         bc = int(bc_map.get(name, 0))
 
         if pos is not None:
@@ -1469,7 +1464,12 @@ def run_tf_fx(cfg, state, allow_entries):
 
         prev = last_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
-
+        print(
+        f"SWEDEN_NOW={datetime.now(ZoneInfo('Europe/Stockholm'))} "
+        f"BOT_NOW={now_str()} "
+        f"PREV_BAR={prev.name}"
+        )
+        
         if processed.get(name) == bar_id:
             continue
 
@@ -1686,7 +1686,7 @@ def main():
     lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
     )
 
-    ensure_log_dirs(cfg)   # ← viktigt att du har denna också
+    ensure_log_dirs(cfg)   
     
     state = load_state()
 
@@ -1803,7 +1803,13 @@ def main():
 
             new_h1_bar = h1_bar_clock is not None and h1_bar_clock != state.get("last_h1_bar_clock")
             new_d1_bar = d1_bar_clock is not None and d1_bar_clock != state.get("last_d1_bar_clock")
-
+            if debug:
+                print(
+                    f"[{now_str()}] BAR CLOCK CHECK "
+                    f"h1_bar_clock={h1_bar_clock} last_h1={state.get('last_h1_bar_clock')} new_h1_bar={new_h1_bar} "
+                    f"d1_bar_clock={d1_bar_clock} last_d1={state.get('last_d1_bar_clock')} new_d1_bar={new_d1_bar}"
+                )
+            
             if new_h1_bar:
                 print(f"[{now_str()}] NEW H1 BAR DETECTED bar={h1_bar_clock}")
                 run_tf_eq(cfg, state, allow)
