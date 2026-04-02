@@ -2,6 +2,8 @@ import json
 import time
 from datetime import datetime, date
 from datetime import datetime, date, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional, Tuple
 import os
 import atexit
@@ -1268,6 +1270,13 @@ def run_tf_eq(cfg, state, allow_entries):
         prev2 = prev_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
         print(f"prev bar timestamp = {prev.name}")
+        def sweden_now():
+            return datetime.now(ZoneInfo("Europe/Stockholm"))
+        print(
+            f"SWEDEN_NOW={sweden_now()} "
+            f"BOT_NOW={now_str()} "
+            f"PREV_BAR={prev.name}"
+        )
         bc = int(bc_map.get(name, 0))
 
         if pos is not None:
