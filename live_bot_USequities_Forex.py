@@ -26,8 +26,8 @@ from MT5exec_USequities_Forex import (
     mt5_healthcheck,
     reconnect_mt5,
     append_trade_lifecycle_log,
+    append_execution_event,
 )
-
 
 # ==========================
 # CONFIG
@@ -38,13 +38,13 @@ STATE_FILE = "live_state.json"
 TF_EQ_MARKETS = [
     {"name": "US500", "symbol": "US500.cash"},
     {"name": "US100", "symbol": "US100.cash"},
-    {"name": "US30",  "symbol": "US30.cash"},
+    {"name": "US30", "symbol": "US30.cash"},
 ]
 
 MR_EQ_MARKETS = [
     {"name": "US500", "symbol": "US500.cash"},
     {"name": "US100", "symbol": "US100.cash"},
-    {"name": "US30",  "symbol": "US30.cash"},
+    {"name": "US30", "symbol": "US30.cash"},
 ]
 
 TF_FX_MARKETS = [
@@ -210,6 +210,8 @@ MAX_ENTRIES_PER_SYMBOL_PER_DAY = 3
 BLOCK_REENTRY_ON_SAME_BAR = True
 
 debug = False
+
+
 # ==========================
 # STATE
 # ==========================
@@ -231,6 +233,7 @@ def save_state(state):
 
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 def acquire_lock_or_die():
     if os.path.exists(LOCK_FILE):
@@ -256,6 +259,8 @@ def acquire_lock_or_die():
             pass
 
     atexit.register(_cleanup)
+
+
 # ==========================
 # MT5 DATA
 # ==========================
@@ -282,8 +287,8 @@ def fetch_ohlc(symbol, tf, n, min_bars=120):
     df = pd.DataFrame(rates)
     df["time"] = pd.to_datetime(df["time"], unit="s")
     df = df.set_index("time")
-    #print(df.tail(3).index)
-    
+    # print(df.tail(3).index)
+
     cols = ["open", "high", "low", "close"]
     if "tick_volume" in df.columns:
         cols.append("tick_volume")
@@ -293,6 +298,7 @@ def fetch_ohlc(symbol, tf, n, min_bars=120):
         cols.append("spread")
 
     return df[cols].copy()
+
 
 def last_closed_bar(df):
     return df.iloc[-2]
@@ -309,11 +315,11 @@ def prev_closed_bar(df):
 MAGIC_MAP = {
     ("US500", "TF_EQ"): 11001,
     ("US100", "TF_EQ"): 11002,
-    ("US30",  "TF_EQ"): 11003,
+    ("US30", "TF_EQ"): 11003,
 
     ("US500", "MR_EQ"): 21001,
     ("US100", "MR_EQ"): 21002,
-    ("US30",  "MR_EQ"): 21003,
+    ("US30", "MR_EQ"): 21003,
 
     ("EURJPY", "TF_FX"): 31001,
     ("GBPJPY", "TF_FX"): 31002,
@@ -349,11 +355,14 @@ def broker_now() -> datetime:
 
     return datetime.now()
 
+
 def broker_today_str() -> str:
     return broker_now().date().isoformat()
 
+
 def now_str():
     return broker_now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 def latest_closed_bar_time(symbol: str, tf: str) -> Optional[pd.Timestamp]:
     df = fetch_ohlc(symbol, tf, 5, min_bars=3)
@@ -376,9 +385,11 @@ def compute_global_bar_clock(symbols, tf: str) -> Optional[str]:
             print(f"[{now_str()}] BAR CLOCK ERROR symbol={sym} tf={tf} err={e}")
     return None
 
+
 def entry_circuit_break_active(state) -> bool:
     until_ts = float(state.get("entry_circuit_break_until", 0.0) or 0.0)
     return time.time() < until_ts
+
 
 def get_bot_positions_grouped():
     positions = mt5.positions_get()
@@ -398,6 +409,7 @@ def get_bot_positions_grouped():
         grouped.setdefault(key, []).append(p)
 
     return grouped
+
 
 def reconcile_on_startup(state):
     """
@@ -447,7 +459,8 @@ def trade_key(symbol: str, magic: int) -> str:
     return f"{symbol}__{magic}"
 
 
-def register_open_trade(state, strategy: str, market: str, symbol: str, magic: int, direction: str, volume: float, entry_price: float):
+def register_open_trade(state, strategy: str, market: str, symbol: str, magic: int, direction: str, volume: float,
+                        entry_price: float):
     reg = state.setdefault("open_trade_registry", {})
     reg[trade_key(symbol, magic)] = {
         "strategy": strategy,
@@ -476,6 +489,7 @@ def current_position_mid_price(symbol: str) -> Optional[float]:
     if bid > 0 and ask > 0:
         return (bid + ask) / 2.0
     return None
+
 
 def finalize_trade_log(cfg, state, symbol: str, magic: int, exit_reason: str):
     rec = unregister_open_trade(state, symbol, magic)
@@ -519,6 +533,55 @@ def finalize_trade_log(cfg, state, symbol: str, magic: int, exit_reason: str):
         "exit_reason": exit_reason,
     })
 
+def log_entry_block(
+    cfg,
+    strategy: str,
+    market: str,
+    symbol: str,
+    magic: int,
+    reason: str,
+    signal: Optional[str] = None,
+    signal_price: Optional[float] = None,
+    current_price: Optional[float] = None,
+    max_drift: Optional[float] = None,
+    bar_id: Optional[str] = None,
+    extra: Optional[dict] = None,
+):
+    row = {
+        "ts": now_str(),
+        "event_type": "ENTRY_BLOCK",
+        "symbol": symbol,
+        "side": signal or "",
+        "volume": "",
+        "magic": magic,
+        "comment": f"{strategy}:{market}:{reason}",
+        "attempt": "",
+        "requested_price": signal_price if signal_price is not None else "",
+        "fill_price": current_price if current_price is not None else "",
+        "spread": "",
+        "retcode": "",
+        "order": "",
+        "deal": "",
+        "position_ticket": "",
+        "exception": "",
+        "bid": "",
+        "ask": "",
+    }
+
+    if extra:
+        extra_txt = " | ".join(f"{k}={v}" for k, v in extra.items())
+        row["exception"] = extra_txt[:250]
+
+    if max_drift is not None:
+        drift_txt = f"max_drift={max_drift}"
+        row["exception"] = f"{row['exception']} | {drift_txt}".strip(" |")
+
+    if bar_id is not None:
+        bar_txt = f"bar_id={bar_id}"
+        row["exception"] = f"{row['exception']} | {bar_txt}".strip(" |")
+
+    append_execution_event(cfg, row)
+
 def entries_today_key(symbol: str, magic: int, day_str: str) -> str:
     return f"{day_str}__{symbol}__{magic}"
 
@@ -556,6 +619,7 @@ def entry_allowed_by_daily_limits(state, symbol: str, magic: int) -> bool:
         return False
     return True
 
+
 def clamp_time_series_index_unique(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_index()
     if not df.index.has_duplicates:
@@ -591,6 +655,7 @@ def position_direction(pos) -> Optional[str]:
         return "SHORT"
     return None
 
+
 def current_entry_side_price(symbol: str, signal: str) -> Optional[float]:
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
@@ -602,11 +667,11 @@ def current_entry_side_price(symbol: str, signal: str) -> Optional[float]:
 
 
 def entry_drift_ok(
-    strategy: str,
-    market: str,
-    symbol: str,
-    signal: str,
-    signal_price: float,
+        strategy: str,
+        market: str,
+        symbol: str,
+        signal: str,
+        signal_price: float,
 ) -> Tuple[bool, Optional[float], Optional[float]]:
     """
     Returnerar:
@@ -625,6 +690,7 @@ def entry_drift_ok(
 
     ok = abs(float(current_price) - float(signal_price)) <= float(max_drift)
     return ok, float(current_price), float(max_drift)
+
 
 def pct_rank_last(x):
     s = pd.Series(x)
@@ -704,6 +770,7 @@ def compute_session_anchored_vwap_and_std(data: pd.DataFrame, vol_col: str, rese
 
     return vwap, std
 
+
 def ensure_log_dirs(cfg):
     import os
     for path in [
@@ -714,7 +781,8 @@ def ensure_log_dirs(cfg):
         d = os.path.dirname(path)
         if d and not os.path.exists(d):
             os.makedirs(d, exist_ok=True)
-            
+
+
 # ==========================
 # INDICATORS
 # ==========================
@@ -918,8 +986,8 @@ def dd_bucket_from_balance(current_equity: float, reference_balance: float) -> s
 
 
 def dynamic_exposure_multiplier(
-    current_equity: float,
-    reference_balance: float = START_BALANCE,
+        current_equity: float,
+        reference_balance: float = START_BALANCE,
 ) -> float:
     bucket = dd_bucket_from_balance(current_equity, reference_balance)
     return float(DYNAMIC_EXPOSURE_MAP[bucket])
@@ -1005,10 +1073,10 @@ def get_cached_market_regime(state, market_name: str, symbol: str) -> Optional[s
 
 
 def strategy_target_with_regime_overlay(
-    strategy: str,
-    market: str,
-    base_target: float,
-    market_regime_label: Optional[str],
+        strategy: str,
+        market: str,
+        base_target: float,
+        market_regime_label: Optional[str],
 ) -> float:
     """
     Tar already dynamically scaled base_target och lägger på market-specific regime overlay.
@@ -1029,10 +1097,10 @@ def strategy_target_with_regime_overlay(
 
 
 def desired_notional(
-    equity: float,
-    strat: str,
-    market: str,
-    market_regime_label: Optional[str] = None,
+        equity: float,
+        strat: str,
+        market: str,
+        market_regime_label: Optional[str] = None,
 ) -> float:
     """
     Final desired notional:
@@ -1077,6 +1145,7 @@ def overlay_info(strategy: str, market: str, regime: Optional[str], equity: floa
 
     return float(base_notional), float(adj_notional)
 
+
 def sizing_debug_info(strategy: str, market: str, regime: Optional[str], equity: float) -> dict:
     mode_factor = EVAL_EXPOSURE_FACTOR if MODE == "EVAL" else FUNDED_EXPOSURE_FACTOR
     dd_bucket = dd_bucket_from_balance(equity, START_BALANCE)
@@ -1107,6 +1176,8 @@ def sizing_debug_info(strategy: str, market: str, regime: Optional[str], equity:
         "base_notional": float(base_notional),
         "adj_notional": float(adj_notional),
     }
+
+
 # ==========================
 # RISK
 # ==========================
@@ -1128,6 +1199,7 @@ def get_all_bot_positions():
 def has_open_bot_positions() -> bool:
     return len(get_all_bot_positions()) > 0
 
+
 def update_day_peak_balance_reference(state, balance: float):
     """
     FTMO-style internal risk reference:
@@ -1141,6 +1213,7 @@ def update_day_peak_balance_reference(state, balance: float):
 
     if float(balance) > float(ref):
         state["day_peak_balance_reference"] = float(balance)
+
 
 def day_drawdown(day_start, equity):
     return equity / day_start - 1
@@ -1199,6 +1272,7 @@ def risk_gate(state, snap, cfg=None):
 
     return allow_entries, must_flatten
 
+
 def flatten_all_known_positions(cfg) -> bool:
     """
     Attempts to close all bot-managed positions.
@@ -1245,6 +1319,7 @@ def flatten_all_known_positions(cfg) -> bool:
     print(f"[{now_str()}] RISK FLATTEN complete")
     return all_close_attempts_ok
 
+
 # ==========================
 # STRATEGY EXECUTION
 # ==========================
@@ -1271,7 +1346,7 @@ def run_tf_eq(cfg, state, allow_entries):
         prev = last_closed_bar(df)
         prev2 = prev_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
-        print(f"prev bar timestamp = {prev.name}")
+
         bc = int(bc_map.get(name, 0))
 
         if pos is not None:
@@ -1288,15 +1363,61 @@ def run_tf_eq(cfg, state, allow_entries):
                     finalize_trade_log(cfg, state, sym, magic, "TF_EQ_EXIT")
                     mark_exit_bar(state, sym, magic, bar_id)
                     bc_map[name] = 0
-
             continue
 
         bc_map[name] = 0
 
-        if not allow_entries or capacity <= 0:
+        if not tf_eq_entry(prev, prev2):
+            continue
+
+        signal = "LONG"
+        signal_price = float(prev["close"])
+
+        if not allow_entries:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="RISK_GATE_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
+            continue
+
+        if capacity <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="NO_CAPACITY",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={"capacity": capacity},
+            )
             continue
 
         if not entry_allowed_by_daily_limits(state, sym, magic):
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DAILY_ENTRY_LIMIT",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "entries_today": entries_today_count(state, sym, magic),
+                    "max_entries_per_day": MAX_ENTRIES_PER_SYMBOL_PER_DAY,
+                },
+            )
             continue
 
         if BLOCK_REENTRY_ON_SAME_BAR and exited_this_bar(state, sym, magic, bar_id):
@@ -1304,33 +1425,71 @@ def run_tf_eq(cfg, state, allow_entries):
                 f"[{now_str()}] TF_EQ {name} entry blocked same-bar reentry "
                 f"symbol={sym} magic={magic} bar_id={bar_id}"
             )
-            continue
-
-        if tf_eq_entry(prev, prev2):
-            signal_price = float(prev["close"])
-            drift_ok, current_px, max_drift = entry_drift_ok(
+            log_entry_block(
+                cfg=cfg,
                 strategy="TF_EQ",
                 market=name,
                 symbol=sym,
-                signal="LONG",
+                magic=magic,
+                reason="SAME_BAR_REENTRY_BLOCK",
+                signal=signal,
                 signal_price=signal_price,
+                bar_id=bar_id,
             )
+            continue
 
-            if not drift_ok:
-                print(
-                    f"[{now_str()}] TF_EQ {name} entry blocked by drift guard "
-                    f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
-                )
-                continue
+        drift_ok, current_px, max_drift = entry_drift_ok(
+            strategy="TF_EQ",
+            market=name,
+            symbol=sym,
+            signal=signal,
+            signal_price=signal_price,
+        )
 
-            regime = get_cached_market_regime(state, name, sym)
-            base_notional, adj_notional = overlay_info("TF_EQ", name, regime, equity)
-            notional = min(adj_notional, capacity)
+        if not drift_ok:
+            print(
+                f"[{now_str()}] TF_EQ {name} entry blocked by drift guard "
+                f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+            )
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DRIFT_GUARD",
+                signal=signal,
+                signal_price=signal_price,
+                current_price=current_px,
+                max_drift=max_drift,
+                bar_id=bar_id,
+            )
+            continue
 
-            if notional <= 0:
-                continue
+        regime = get_cached_market_regime(state, name, sym)
+        base_notional, adj_notional = overlay_info("TF_EQ", name, regime, equity)
+        notional = min(adj_notional, capacity)
 
-            dbg = sizing_debug_info("TF_EQ", name, regime, equity)
+        if notional <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="ZERO_NOTIONAL",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "adj_notional": adj_notional,
+                    "capacity": capacity,
+                },
+            )
+            continue
+
+        dbg = sizing_debug_info("TF_EQ", name, regime, equity)
+        if debug:
             print(
                 f"[{now_str()}] TF_EQ {name} regime={regime} "
                 f"mode_factor={dbg['mode_factor']:.2f} "
@@ -1339,12 +1498,13 @@ def run_tf_eq(cfg, state, allow_entries):
                 f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
             )
 
-            ok, vol = open_long_by_notional(sym, notional, magic, cfg, "TF_EQ_ENTRY")
-            if ok:
-                entry_px = current_entry_side_price(sym, "LONG") or signal_price
-                register_open_trade(state, "TF_EQ", name, sym, magic, "LONG", vol, entry_px)
-                increment_entries_today(state, sym, magic)
-                capacity -= notional
+        ok, vol = open_long_by_notional(sym, notional, magic, cfg, "TF_EQ_ENTRY")
+        if ok:
+            entry_px = current_entry_side_price(sym, "LONG") or signal_price
+            register_open_trade(state, "TF_EQ", name, sym, magic, "LONG", vol, entry_px)
+            increment_entries_today(state, sym, magic)
+            capacity -= notional
+
 
 def run_mr_eq(cfg, state, allow_entries):
     snap = account_snapshot()
@@ -1381,11 +1541,60 @@ def run_mr_eq(cfg, state, allow_entries):
             mr_eq_processed[name] = bar_id
             continue
 
-        if not allow_entries or capacity <= 0:
+        if not mr_eq_entry(prev):
+            mr_eq_processed[name] = bar_id
+            continue
+
+        signal = "LONG"
+        signal_price = float(prev["close"])
+
+        if not allow_entries:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="RISK_GATE_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
+            mr_eq_processed[name] = bar_id
+            continue
+
+        if capacity <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="NO_CAPACITY",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={"capacity": capacity},
+            )
             mr_eq_processed[name] = bar_id
             continue
 
         if not entry_allowed_by_daily_limits(state, sym, magic):
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DAILY_ENTRY_LIMIT",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "entries_today": entries_today_count(state, sym, magic),
+                    "max_entries_per_day": MAX_ENTRIES_PER_SYMBOL_PER_DAY,
+                },
+            )
             mr_eq_processed[name] = bar_id
             continue
 
@@ -1394,36 +1603,74 @@ def run_mr_eq(cfg, state, allow_entries):
                 f"[{now_str()}] MR_EQ {name} entry blocked same-bar reentry "
                 f"symbol={sym} magic={magic} bar_id={bar_id}"
             )
-            mr_eq_processed[name] = bar_id
-            continue
-
-        if mr_eq_entry(prev):
-            signal_price = float(prev["close"])
-            drift_ok, current_px, max_drift = entry_drift_ok(
+            log_entry_block(
+                cfg=cfg,
                 strategy="MR_EQ",
                 market=name,
                 symbol=sym,
-                signal="LONG",
+                magic=magic,
+                reason="SAME_BAR_REENTRY_BLOCK",
+                signal=signal,
                 signal_price=signal_price,
+                bar_id=bar_id,
             )
+            mr_eq_processed[name] = bar_id
+            continue
 
-            if not drift_ok:
-                print(
-                    f"[{now_str()}] MR_EQ {name} entry blocked by drift guard "
-                    f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
-                )
-                mr_eq_processed[name] = bar_id
-                continue
+        drift_ok, current_px, max_drift = entry_drift_ok(
+            strategy="MR_EQ",
+            market=name,
+            symbol=sym,
+            signal=signal,
+            signal_price=signal_price,
+        )
 
-            regime = get_cached_market_regime(state, name, sym)
-            base_notional, adj_notional = overlay_info("MR_EQ", name, regime, equity)
-            notional = min(adj_notional, capacity)
+        if not drift_ok:
+            print(
+                f"[{now_str()}] MR_EQ {name} entry blocked by drift guard "
+                f"signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
+            )
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DRIFT_GUARD",
+                signal=signal,
+                signal_price=signal_price,
+                current_price=current_px,
+                max_drift=max_drift,
+                bar_id=bar_id,
+            )
+            mr_eq_processed[name] = bar_id
+            continue
 
-            if notional <= 0:
-                mr_eq_processed[name] = bar_id
-                continue
+        regime = get_cached_market_regime(state, name, sym)
+        base_notional, adj_notional = overlay_info("MR_EQ", name, regime, equity)
+        notional = min(adj_notional, capacity)
 
-            dbg = sizing_debug_info("MR_EQ", name, regime, equity)
+        if notional <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_EQ",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="ZERO_NOTIONAL",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "adj_notional": adj_notional,
+                    "capacity": capacity,
+                },
+            )
+            mr_eq_processed[name] = bar_id
+            continue
+
+        dbg = sizing_debug_info("MR_EQ", name, regime, equity)
+        if debug:
             print(
                 f"[{now_str()}] MR_EQ {name} regime={regime} "
                 f"mode_factor={dbg['mode_factor']:.2f} "
@@ -1432,14 +1679,15 @@ def run_mr_eq(cfg, state, allow_entries):
                 f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
             )
 
-            ok, vol = open_long_by_notional(sym, notional, magic, cfg, "MR_EQ_ENTRY")
-            if ok:
-                entry_px = current_entry_side_price(sym, "LONG") or signal_price
-                register_open_trade(state, "MR_EQ", name, sym, magic, "LONG", vol, entry_px)
-                increment_entries_today(state, sym, magic)
-                capacity -= notional
+        ok, vol = open_long_by_notional(sym, notional, magic, cfg, "MR_EQ_ENTRY")
+        if ok:
+            entry_px = current_entry_side_price(sym, "LONG") or signal_price
+            register_open_trade(state, "MR_EQ", name, sym, magic, "LONG", vol, entry_px)
+            increment_entries_today(state, sym, magic)
+            capacity -= notional
 
         mr_eq_processed[name] = bar_id
+
 
 def run_tf_fx(cfg, state, allow_entries):
     snap = account_snapshot()
@@ -1464,12 +1712,7 @@ def run_tf_fx(cfg, state, allow_entries):
 
         prev = last_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
-        print(
-        f"SWEDEN_NOW={datetime.now(ZoneInfo('Europe/Stockholm'))} "
-        f"BOT_NOW={now_str()} "
-        f"PREV_BAR={prev.name}"
-        )
-        
+
         if processed.get(name) == bar_id:
             continue
 
@@ -1484,11 +1727,60 @@ def run_tf_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
-        if not allow_entries or capacity <= 0:
+        signal = tf_fx_entry(name, prev)
+        if signal is None:
+            processed[name] = bar_id
+            continue
+
+        signal_price = float(prev["close"])
+
+        if not allow_entries:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="RISK_GATE_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
+            processed[name] = bar_id
+            continue
+
+        if capacity <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="NO_CAPACITY",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={"capacity": capacity},
+            )
             processed[name] = bar_id
             continue
 
         if not entry_allowed_by_daily_limits(state, sym, magic):
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DAILY_ENTRY_LIMIT",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "entries_today": entries_today_count(state, sym, magic),
+                    "max_entries_per_day": MAX_ENTRIES_PER_SYMBOL_PER_DAY,
+                },
+            )
             processed[name] = bar_id
             continue
 
@@ -1497,15 +1789,20 @@ def run_tf_fx(cfg, state, allow_entries):
                 f"[{now_str()}] TF_FX {name} entry blocked same-bar reentry "
                 f"symbol={sym} magic={magic} bar_id={bar_id}"
             )
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="SAME_BAR_REENTRY_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
             processed[name] = bar_id
             continue
 
-        signal = tf_fx_entry(name, prev)
-        if signal is None:
-            processed[name] = bar_id
-            continue
-
-        signal_price = float(prev["close"])
         drift_ok, current_px, max_drift = entry_drift_ok(
             strategy="TF_FX",
             market=name,
@@ -1519,6 +1816,19 @@ def run_tf_fx(cfg, state, allow_entries):
                 f"[{now_str()}] TF_FX {name} entry blocked by drift guard "
                 f"signal={signal} signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
             )
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DRIFT_GUARD",
+                signal=signal,
+                signal_price=signal_price,
+                current_price=current_px,
+                max_drift=max_drift,
+                bar_id=bar_id,
+            )
             processed[name] = bar_id
             continue
 
@@ -1527,17 +1837,33 @@ def run_tf_fx(cfg, state, allow_entries):
         notional = min(adj_notional, capacity)
 
         if notional <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="ZERO_NOTIONAL",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "adj_notional": adj_notional,
+                    "capacity": capacity,
+                },
+            )
             processed[name] = bar_id
             continue
 
         dbg = sizing_debug_info("TF_FX", name, regime, equity)
-        print(
-            f"[{now_str()}] TF_FX {name} regime={regime} signal={signal} "
-            f"mode_factor={dbg['mode_factor']:.2f} "
-            f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
-            f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
-            f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
-        )
+        if debug:
+            print(
+                f"[{now_str()}] TF_FX {name} regime={regime} signal={signal} "
+                f"mode_factor={dbg['mode_factor']:.2f} "
+                f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+                f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+                f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+            )
 
         if signal == "LONG":
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "TF_FX_ENTRY_LONG")
@@ -1555,7 +1881,6 @@ def run_tf_fx(cfg, state, allow_entries):
                 capacity -= notional
 
         processed[name] = bar_id
-
 
 def run_mr_fx(cfg, state, allow_entries):
     snap = account_snapshot()
@@ -1596,11 +1921,60 @@ def run_mr_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
-        if not allow_entries or capacity <= 0:
+        signal = mr_fx_entry(prev, prev2)
+        if signal is None:
+            processed[name] = bar_id
+            continue
+
+        signal_price = float(prev["close"])
+
+        if not allow_entries:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="RISK_GATE_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
+            processed[name] = bar_id
+            continue
+
+        if capacity <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="NO_CAPACITY",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={"capacity": capacity},
+            )
             processed[name] = bar_id
             continue
 
         if not entry_allowed_by_daily_limits(state, sym, magic):
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DAILY_ENTRY_LIMIT",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "entries_today": entries_today_count(state, sym, magic),
+                    "max_entries_per_day": MAX_ENTRIES_PER_SYMBOL_PER_DAY,
+                },
+            )
             processed[name] = bar_id
             continue
 
@@ -1609,15 +1983,20 @@ def run_mr_fx(cfg, state, allow_entries):
                 f"[{now_str()}] MR_FX {name} entry blocked same-bar reentry "
                 f"symbol={sym} magic={magic} bar_id={bar_id}"
             )
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="SAME_BAR_REENTRY_BLOCK",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+            )
             processed[name] = bar_id
             continue
 
-        signal = mr_fx_entry(prev, prev2)
-        if signal is None:
-            processed[name] = bar_id
-            continue
-
-        signal_price = float(prev["close"])
         drift_ok, current_px, max_drift = entry_drift_ok(
             strategy="MR_FX",
             market=name,
@@ -1631,6 +2010,19 @@ def run_mr_fx(cfg, state, allow_entries):
                 f"[{now_str()}] MR_FX {name} entry blocked by drift guard "
                 f"signal={signal} signal_price={signal_price:.5f} current_price={current_px} max_drift={max_drift}"
             )
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="DRIFT_GUARD",
+                signal=signal,
+                signal_price=signal_price,
+                current_price=current_px,
+                max_drift=max_drift,
+                bar_id=bar_id,
+            )
             processed[name] = bar_id
             continue
 
@@ -1639,17 +2031,33 @@ def run_mr_fx(cfg, state, allow_entries):
         notional = min(adj_notional, capacity)
 
         if notional <= 0:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="ZERO_NOTIONAL",
+                signal=signal,
+                signal_price=signal_price,
+                bar_id=bar_id,
+                extra={
+                    "adj_notional": adj_notional,
+                    "capacity": capacity,
+                },
+            )
             processed[name] = bar_id
             continue
 
         dbg = sizing_debug_info("MR_FX", name, regime, equity)
-        print(
-            f"[{now_str()}] MR_FX {name} regime={regime} signal={signal} "
-            f"mode_factor={dbg['mode_factor']:.2f} "
-            f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
-            f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
-            f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
-        )
+        if debug:
+            print(
+                f"[{now_str()}] MR_FX {name} regime={regime} signal={signal} "
+                f"mode_factor={dbg['mode_factor']:.2f} "
+                f"dd_bucket={dbg['dd_bucket']} dd_factor={dbg['dd_factor']:.2f} "
+                f"regime_mult={dbg['regime_mult']:.2f} final_factor={dbg['final_factor']:.4f} "
+                f"base_notional={dbg['base_notional']:.2f} adj_notional={dbg['adj_notional']:.2f}"
+            )
 
         if signal == "LONG":
             ok, vol = open_long_by_notional(sym, notional, magic, cfg, "MR_FX_ENTRY_LONG")
@@ -1668,26 +2076,24 @@ def run_mr_fx(cfg, state, allow_entries):
 
         processed[name] = bar_id
 
-
 # ==========================
 # MAIN LOOP
 # ==========================
 
 def main():
-
     acquire_lock_or_die()
     ensure_initialized()
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     cfg = ExecConfig(
-    log_csv_path=os.path.join(BASE_DIR, "logs/trade_log.csv"),
-    event_log_csv_path=os.path.join(BASE_DIR, "logs/execution_events.csv"),
-    lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
+        log_csv_path=os.path.join(BASE_DIR, "logs/trade_log.csv"),
+        event_log_csv_path=os.path.join(BASE_DIR, "logs/execution_events.csv"),
+        lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
     )
 
-    ensure_log_dirs(cfg)   
-    
+    ensure_log_dirs(cfg)
+
     state = load_state()
 
     state.setdefault("day_start_equity", None)
@@ -1809,7 +2215,7 @@ def main():
                     f"h1_bar_clock={h1_bar_clock} last_h1={state.get('last_h1_bar_clock')} new_h1_bar={new_h1_bar} "
                     f"d1_bar_clock={d1_bar_clock} last_d1={state.get('last_d1_bar_clock')} new_d1_bar={new_d1_bar}"
                 )
-            
+
             if new_h1_bar:
                 print(f"[{now_str()}] NEW H1 BAR DETECTED bar={h1_bar_clock}")
                 run_tf_eq(cfg, state, allow)
