@@ -232,7 +232,7 @@ def save_state(state):
 
 
 def now_str():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(ZoneInfo("Europe/Stockholm")).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def acquire_lock_or_die():
