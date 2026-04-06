@@ -359,11 +359,6 @@ def broker_now() -> datetime:
 def broker_today_str() -> str:
     return broker_now().date().isoformat()
 
-
-def now_str():
-    return broker_now().strftime("%Y-%m-%d %H:%M:%S")
-
-
 def latest_closed_bar_time(symbol: str, tf: str) -> Optional[pd.Timestamp]:
     df = fetch_ohlc(symbol, tf, 5, min_bars=3)
     if df.empty or len(df) < 3:
