@@ -2,6 +2,7 @@ import time
 import csv
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional, Tuple, Dict
 
 import MetaTrader5 as mt5
@@ -61,7 +62,7 @@ MAX_SPREAD_BY_SYMBOL = {
 # ==========================
 
 def _ts() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(ZoneInfo("Europe/Stockholm")).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def ensure_initialized():
