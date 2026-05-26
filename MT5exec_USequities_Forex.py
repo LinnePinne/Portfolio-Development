@@ -260,17 +260,26 @@ def spread_guard_ok(symbol: str) -> bool:
 # ACCOUNT
 # ==========================
 
+def _safe_float(x, default: float = 0.0) -> float:
+    try:
+        if x is None:
+            return float(default)
+        return float(x)
+    except Exception:
+        return float(default)
+
+
 def account_snapshot() -> Dict[str, float]:
     acc = mt5.account_info()
     if acc is None:
         raise RuntimeError("account_info failed")
 
     return {
-        "equity": float(acc.equity),
-        "balance": float(acc.balance),
-        "margin": float(acc.margin),
-        "margin_free": float(acc.margin_free),
-        "margin_level": float(acc.margin_level) if acc.margin_level else 0.0,
+        "equity": _safe_float(getattr(acc, "equity", None)),
+        "balance": _safe_float(getattr(acc, "balance", None)),
+        "margin": _safe_float(getattr(acc, "margin", None)),
+        "margin_free": _safe_float(getattr(acc, "margin_free", None)),
+        "margin_level": _safe_float(getattr(acc, "margin_level", None)),
     }
 
 
@@ -947,3 +956,4 @@ def open_short_by_notional(
     )
 
     return ok, volume
+
