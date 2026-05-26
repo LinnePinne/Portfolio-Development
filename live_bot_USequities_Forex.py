@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from typing import Optional, Tuple
 import os
 import atexit
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -187,7 +188,7 @@ TF_FX_PARAMS = dict(
 )
 
 MR_FX_PARAMS = dict(
-    session_start="00:00:00",
+    session_start="01:00:00",
     session_end="07:00:00",
     vwap_reset="20:00:00",
     entry_std=2.25,
@@ -358,6 +359,7 @@ def broker_now() -> datetime:
 
 def broker_today_str() -> str:
     return broker_now().date().isoformat()
+
 
 def latest_closed_bar_time(symbol: str, tf: str) -> Optional[pd.Timestamp]:
     df = fetch_ohlc(symbol, tf, 5, min_bars=3)
@@ -1211,7 +1213,16 @@ def update_day_peak_balance_reference(state, balance: float):
 
 
 def day_drawdown(day_start, equity):
-    return equity / day_start - 1
+    if day_start is None:
+        return 0.0
+
+    day_start = float(day_start)
+    equity = float(equity)
+
+    if day_start <= 0:
+        return 0.0
+
+    return equity / day_start - 1.0
 
 
 def risk_gate(state, snap, cfg=None):
@@ -1231,8 +1242,20 @@ def risk_gate(state, snap, cfg=None):
     # Update today's highest balance reference
     update_day_peak_balance_reference(state, balance)
 
-    ref_balance = float(state.get("day_peak_balance_reference", balance))
-    day_start_balance = float(state.get("day_start_balance", balance))
+    ref_raw = state.get("day_peak_balance_reference")
+    day_start_raw = state.get("day_start_balance")
+
+    if ref_raw is None:
+        ref_balance = balance
+        state["day_peak_balance_reference"] = float(balance)
+    else:
+        ref_balance = float(ref_raw)
+
+    if day_start_raw is None:
+        day_start_balance = balance
+        state["day_start_balance"] = float(balance)
+    else:
+        day_start_balance = float(day_start_raw)
 
     # Internal daily kill threshold: -4.5% from intraday highest balance reference
     soft_floor = ref_balance * (1.0 + SOFT_CUTOFF_DAILY)  # SOFT_CUTOFF_DAILY = -0.045
@@ -1341,7 +1364,7 @@ def run_tf_eq(cfg, state, allow_entries):
         prev = last_closed_bar(df)
         prev2 = prev_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
-
+        
         bc = int(bc_map.get(name, 0))
 
         if pos is not None:
@@ -1706,6 +1729,7 @@ def run_tf_fx(cfg, state, allow_entries):
         df = compute_tf_fx_indicators(df)
 
         prev = last_closed_bar(df)
+        print(f"NOW={now_str()} | PREV_BAR={prev.name}")
         bar_id = str(pd.Timestamp(prev.name))
 
         if processed.get(name) == bar_id:
@@ -1917,6 +1941,54 @@ def run_mr_fx(cfg, state, allow_entries):
             continue
 
         signal = mr_fx_entry(prev, prev2)
+
+        ###
+        entry_std = MR_FX_PARAMS["entry_std"]
+        upper_band = prev["VWAP"] + entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(prev["TP_STD"]) else np.nan
+        lower_band = prev["VWAP"] - entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(prev["TP_STD"]) else np.nan
+        prev_upper = prev2["VWAP"] + entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(prev2["TP_STD"]) else np.nan
+        prev_lower = prev2["VWAP"] - entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(prev2["TP_STD"]) else np.nan
+        upper_break = (
+            np.isfinite(prev_upper)
+            and np.isfinite(upper_band)
+            and (prev2["close"] < prev_upper)
+            and (prev["close"] > upper_band)
+        )
+        lower_break = (
+            np.isfinite(prev_lower)
+            and np.isfinite(lower_band)
+            and (prev2["close"] > prev_lower)
+            and (prev["close"] < lower_band)
+        )
+        print(
+            f"[{now_str()}] MR_FX DEBUG {name} "
+            f"bar_id={bar_id} signal={signal} "
+            f"prev2_bar={prev2.name} prev_bar={prev.name} "
+            f"prev2_in_session={in_session(prev2.name, MR_FX_PARAMS['session_start'], MR_FX_PARAMS['session_end'])} "
+            f"prev_in_session={in_session(prev.name, MR_FX_PARAMS['session_start'], MR_FX_PARAMS['session_end'])}"
+        )
+        print(
+            f"[{now_str()}] MR_FX VALUES {name} "
+            f"prev2_close={float(prev2['close']):.5f} prev_close={float(prev['close']):.5f} "
+            f"prev2_vwap={float(prev2['VWAP']) if np.isfinite(prev2['VWAP']) else np.nan:.5f} "
+            f"prev_vwap={float(prev['VWAP']) if np.isfinite(prev['VWAP']) else np.nan:.5f} "
+            f"prev2_tpstd={float(prev2['TP_STD']) if np.isfinite(prev2['TP_STD']) else np.nan:.5f} "
+            f"prev_tpstd={float(prev['TP_STD']) if np.isfinite(prev['TP_STD']) else np.nan:.5f}"
+        )
+        print(
+            f"[{now_str()}] MR_FX BANDS {name} "
+            f"prev_upper={float(prev_upper) if np.isfinite(prev_upper) else np.nan:.5f} "
+            f"prev_lower={float(prev_lower) if np.isfinite(prev_lower) else np.nan:.5f} "
+            f"upper_band={float(upper_band) if np.isfinite(upper_band) else np.nan:.5f} "
+            f"lower_band={float(lower_band) if np.isfinite(lower_band) else np.nan:.5f} "
+            f"upper_break={upper_break} lower_break={lower_break}"
+        )
+        print(
+            f"[{now_str()}] MR_FX TAIL {name}\n"
+            f"{df[['close', 'VWAP', 'TP_STD']].tail(5).to_string()}"
+        )
+        ###
+
         if signal is None:
             processed[name] = bar_id
             continue
@@ -2086,7 +2158,7 @@ def main():
         event_log_csv_path=os.path.join(BASE_DIR, "logs/execution_events.csv"),
         lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
     )
-
+    
     ensure_log_dirs(cfg)
 
     state = load_state()
@@ -2126,7 +2198,7 @@ def main():
         print(f"{m['name']} TF_FX magic={magic_for(m['name'], 'TF_FX')}")
     for m in MR_FX_MARKETS:
         print(f"{m['name']} MR_FX magic={magic_for(m['name'], 'MR_FX')}")
-
+    
     print("\n--- REGIME MARKET MULTIPLIERS ---")
     for k, v in REGIME_MARKET_MULTIPLIERS.items():
         print(f"{k}: {v}")
@@ -2162,9 +2234,9 @@ def main():
             equity = float(snap["equity"])
 
             today = broker_today_str()
-            if state.get("day_start_date") != today:
+            if state.get("day_start_date") != today or state.get("day_start_equity") is None or state.get("day_start_balance") is None:
                 state["day_start_date"] = today
-                state["day_start_equity"] = equity
+                state["day_start_equity"] = float(equity)
                 state["day_start_balance"] = float(snap["balance"])
                 state["day_peak_balance_reference"] = float(snap["balance"])
                 state["risk_flattened_today"] = False
@@ -2239,19 +2311,13 @@ def main():
 
 
         except Exception as e:
-
             state["consecutive_loop_errors"] = int(state.get("consecutive_loop_errors", 0)) + 1
+
             print(
                 f"[{now_str()}] LOOP ERROR err={e} "
                 f"consecutive={state['consecutive_loop_errors']}"
             )
-
-            if state["consecutive_loop_errors"] >= MAX_CONSECUTIVE_LOOP_ERRORS:
-                state["entry_circuit_break_until"] = time.time() + ERROR_COOLDOWN_SECONDS
-                print(
-                    f"[{now_str()}] ENTRY CIRCUIT BREAK TRIGGERED "
-                    f"for {ERROR_COOLDOWN_SECONDS}s"
-                )
+            traceback.print_exc()
 
             try:
                 save_state(state)
