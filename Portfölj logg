@@ -591,5 +591,5 @@ Max intratrade DD, worst open loss, daily loss breach, margin usage, gap risk, k
 Kort sagt: edgen kan vara verklig, men nuvarande bevis är inte tillräckligt rent för att säga att strategin är objektivt färdigvaliderad.
 
 (2026-05-28) Vi har nu robusthetsvaliderat VWAP MR forex och det vi kommit fram till är att edge är verklig, de förbättringsåtgärder vi kommit
-fram till är att droppa GBPCHF eftersom vi beedömde den som falsk diversifiering och inte tillräckligt bra i walk-forward. Vi ska lägga in en
-EURUSD baserad regime riski multiplier. När EURUSD regimen är i trend_down + mid_vol.
+fram till är att droppa GBPCHF eftersom vi bedömde den som falsk diversifiering och inte tillräckligt bra i walk-forward. Vi ska lägga in en
+EURUSD baserad regime riski multiplier. När EURUSD regimen är i trend_down + mid_vol ska exponeringen halveras
