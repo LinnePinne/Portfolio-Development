@@ -592,4 +592,31 @@ Kort sagt: edgen kan vara verklig, men nuvarande bevis är inte tillräckligt re
 
 (2026-05-28) Vi har nu robusthetsvaliderat VWAP MR forex och det vi kommit fram till är att edge är verklig, de förbättringsåtgärder vi kommit
 fram till är att droppa GBPCHF eftersom vi bedömde den som falsk diversifiering och inte tillräckligt bra i walk-forward. Vi ska lägga in en
-EURUSD baserad regime riski multiplier. När EURUSD regimen är i trend_down + mid_vol ska exponeringen halveras
+global EURUSD baserad regime riski multiplier. När EURUSD regimen är i trend_down + mid_vol ska exponeringen halveras för alla marknader. 
+Trend regimen baseras på daily data där moving averages används, för att bilda en slope där dagens ma jämförs med moving average för 20 dagar
+sedan, skillnaden uttrycks procentuellt genom ma_slope = ma / ma.shift(20) - 1.0. Detta ger ett trendmått som beskriver om den långsiktiga 
+EURUSD trenden lutar uppåt, nedåt eller neutralt. Om lutningen är mindre än -0.25% klassificeras marknaden som trend_down. Volatilitets regimen
+fungerar genom att beräkna realiserad volatilitet på EURUSD daily returns de senaste 20 dagarna. Först räknas procentuella returns fram med 
+pct_change(). Därefter tas standardavvikelsen över ett 20-dagars fönster vilket ger ett mått på hur mycket EURUSD faktiskt har rört sig den 
+senaste tiden. Detta annualiseras sedan med kvadratroten av 252 för att få ett standardiserat volatilitetsmått. Själva regimklassificeringen 
+görs inte mot fasta nivåer, utan mot historiska kvantilar. Två trösklar räknas fram, 33:e percentilen och den 66:e percentilen. Om dagens 
+realiserade volatilitet ligger under den lägre percentilen klassificeras marknaden som low_vol. Om den ligger över den övre percentilen 
+klassificeras den som high_vol. Allt däremellan blir mid_vol. Det innebär att vol-regimen alltid är relativ till den historiska 
+distributionsmiljö som fanns tillgänglig vid den tidpunkten. Modellen anpassar sig alltså automatiskt till förändrade marknadsförhållanden 
+utan att använda statiska nivåer. Så Exakt live-process för vol definition blir såhär:
+Varje dag, efter att EURUSD daily candle har stängt:
+1. Uppdatera EURUSD daily close-serien.
+2. Räkna daily returns.
+3. Räkna 20-dagars annualiserad realized vol.
+4. Ta all historisk rv_short fram till och med föregående stängda dag.
+5. Beräkna:
+33:e percentilen
+66:e percentilen
+6. Klassificera senaste färdigstängda dag.
+7. Använd den regime-labeln för dagens intraday-trades.
+Viktig detalj
+För en trade som tas idag under 00:00–07:00 ska vi inte använda dagens ofärdiga daily candle. Exempelvis om boten ska handla tisdag 03:00, då 
+ska regime baseras på EURUSD daily data till och med måndagens stängning.
+Så för VWAP MR forex ska vi ta bort GBPCHF och lägga till global EURUSD regime risk multiplier, vi ska även ändra ERC definitionen så att den
+blir rullande. Rullande ERC vikter ska även göras för de andra strategier som är viktat enligt ERC men det fixar vi när vi gått igenom projekt-
+förbättringar för de också.
