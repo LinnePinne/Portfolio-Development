@@ -621,4 +621,5 @@ Så för VWAP MR forex ska vi ta bort GBPCHF och lägga till global EURUSD regim
 blir rullande. Rullande ERC vikter ska även göras för de andra strategier som är viktat enligt ERC men det fixar vi när vi gått igenom projekt-
 förbättringar för de också. Vi måste också fixa signal logiken för VWAP MR forex, det är möjligt att vi exekverar en bar senare än vad vi ska,
 sen ska vi ändra session_start från 01:00 till 00:00 så att signal-session är 00:00 till 07:00, sen lägger vi till ett exekveringsfönster från
-01:00 till 08:00. Detta kan också vara anledningen till varför OR Breakout TF Forex inte tar några trades.
+01:00 till 08:00. Detta kan också vara anledningen till varför OR Breakout TF Forex inte tar några trades. Just nu kopplas sessionsfönstret 
+endast till signalbar.
