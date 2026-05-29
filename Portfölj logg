@@ -623,3 +623,13 @@ förbättringar för de också. Vi måste också fixa signal logiken för VWAP M
 sen ska vi ändra session_start från 01:00 till 00:00 så att signal-session är 00:00 till 07:00, sen lägger vi till ett exekveringsfönster från
 01:00 till 08:00. Detta kan också vara anledningen till varför OR Breakout TF Forex inte tar några trades. Just nu kopplas sessionsfönstret 
 endast till signalbar.
+(2026-05-29) Nu har vi fixat sessionslogiken för båda forex strategierna så att signalbar och exekveringsbar blir rätt. Vi har också tagit bort 
+GBPCHF från portföljen, vi tänker att det är bäst att vänta med EURUSD regime risk multiplier till efter vi är klara med utvärdering av projekt 
+för de tre andra strategierna eftersom vi då kommer köra om portölj simulation för att återkalibrera vikter och skalning. Nu när GBPCHF är borta
+måste vi göra om vikterna temporärt till manuellt satta vikter som tillsammans blir 1.0, vi vill att EURCAD och EURUSD ska ha lite mer risk så 
+vi sätter MR_FX_MARKET_WEIGHTS = {
+    "EURCHF": 0.24,
+    "EURCAD": 0.28,
+    "EURUSD": 0.26,
+    "USDCHF": 0.22,
+}
