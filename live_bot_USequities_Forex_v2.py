@@ -57,7 +57,6 @@ TF_FX_MARKETS = [
 MR_FX_MARKETS = [
     {"name": "EURCHF", "symbol": "EURCHF"},
     {"name": "EURCAD", "symbol": "EURCAD"},
-    {"name": "GBPCHF", "symbol": "GBPCHF"},
     {"name": "EURUSD", "symbol": "EURUSD"},
     {"name": "USDCHF", "symbol": "USDCHF"},
 ]
@@ -92,7 +91,6 @@ TF_FX_MARKET_WEIGHTS = {
 MR_FX_MARKET_WEIGHTS = {
     "EURCHF": 0.229429,
     "EURCAD": 0.205126,
-    "GBPCHF": 0.196246,
     "EURUSD": 0.190355,
     "USDCHF": 0.178844,
 }
@@ -115,7 +113,6 @@ REGIME_MARKET_MULTIPLIERS = {
     ("ExtremeVol", "MR_FX", "USDCHF"): 1.00,
     ("ExtremeVol", "MR_FX", "EURUSD"): 1.00,
     ("ExtremeVol", "MR_FX", "EURCHF"): 1.00,
-    ("ExtremeVol", "MR_FX", "GBPCHF"): 1.00,
     ("ExtremeVol", "MR_FX", "EURCAD"): 0.65,
 
     ("LowVol", "TF_FX", "EURJPY"): 0.35,
@@ -163,7 +160,6 @@ MAX_ENTRY_DRIFT = {
     "MR_FX": {
         "EURCHF": 0.0008,
         "EURCAD": 0.0012,
-        "GBPCHF": 0.0012,
         "EURUSD": 0.0008,
         "USDCHF": 0.0008,
     },
@@ -334,9 +330,8 @@ MAGIC_MAP = {
 
     ("EURCHF", "MR_FX"): 41001,
     ("EURCAD", "MR_FX"): 41002,
-    ("GBPCHF", "MR_FX"): 41003,
-    ("EURUSD", "MR_FX"): 41004,
-    ("USDCHF", "MR_FX"): 41005,
+    ("EURUSD", "MR_FX"): 41003,
+    ("USDCHF", "MR_FX"): 41004,
 }
 
 
@@ -536,19 +531,20 @@ def finalize_trade_log(cfg, state, symbol: str, magic: int, exit_reason: str):
         "exit_reason": exit_reason,
     })
 
+
 def log_entry_block(
-    cfg,
-    strategy: str,
-    market: str,
-    symbol: str,
-    magic: int,
-    reason: str,
-    signal: Optional[str] = None,
-    signal_price: Optional[float] = None,
-    current_price: Optional[float] = None,
-    max_drift: Optional[float] = None,
-    bar_id: Optional[str] = None,
-    extra: Optional[dict] = None,
+        cfg,
+        strategy: str,
+        market: str,
+        symbol: str,
+        magic: int,
+        reason: str,
+        signal: Optional[str] = None,
+        signal_price: Optional[float] = None,
+        current_price: Optional[float] = None,
+        max_drift: Optional[float] = None,
+        bar_id: Optional[str] = None,
+        extra: Optional[dict] = None,
 ):
     row = {
         "ts": now_str(),
@@ -584,6 +580,7 @@ def log_entry_block(
         row["exception"] = f"{row['exception']} | {bar_txt}".strip(" |")
 
     append_execution_event(cfg, row)
+
 
 def entries_today_key(symbol: str, magic: int, day_str: str) -> str:
     return f"{day_str}__{symbol}__{magic}"
@@ -1423,7 +1420,7 @@ def run_tf_eq(cfg, state, allow_entries):
         prev = last_closed_bar(df)
         prev2 = prev_closed_bar(df)
         bar_id = str(pd.Timestamp(prev.name))
-        
+
         bc = int(bc_map.get(name, 0))
 
         if pos is not None:
@@ -1986,6 +1983,7 @@ def run_tf_fx(cfg, state, allow_entries):
 
         processed[name] = bar_id
 
+
 def run_mr_fx(cfg, state, allow_entries):
     snap = account_snapshot()
     equity = float(snap["equity"])
@@ -2056,21 +2054,25 @@ def run_mr_fx(cfg, state, allow_entries):
 
         ###
         entry_std = MR_FX_PARAMS["entry_std"]
-        upper_band = prev["VWAP"] + entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(prev["TP_STD"]) else np.nan
-        lower_band = prev["VWAP"] - entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(prev["TP_STD"]) else np.nan
-        prev_upper = prev2["VWAP"] + entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(prev2["TP_STD"]) else np.nan
-        prev_lower = prev2["VWAP"] - entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(prev2["TP_STD"]) else np.nan
+        upper_band = prev["VWAP"] + entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(
+            prev["TP_STD"]) else np.nan
+        lower_band = prev["VWAP"] - entry_std * prev["TP_STD"] if np.isfinite(prev["VWAP"]) and np.isfinite(
+            prev["TP_STD"]) else np.nan
+        prev_upper = prev2["VWAP"] + entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(
+            prev2["TP_STD"]) else np.nan
+        prev_lower = prev2["VWAP"] - entry_std * prev2["TP_STD"] if np.isfinite(prev2["VWAP"]) and np.isfinite(
+            prev2["TP_STD"]) else np.nan
         upper_break = (
-            np.isfinite(prev_upper)
-            and np.isfinite(upper_band)
-            and (prev2["close"] < prev_upper)
-            and (prev["close"] > upper_band)
+                np.isfinite(prev_upper)
+                and np.isfinite(upper_band)
+                and (prev2["close"] < prev_upper)
+                and (prev["close"] > upper_band)
         )
         lower_break = (
-            np.isfinite(prev_lower)
-            and np.isfinite(lower_band)
-            and (prev2["close"] > prev_lower)
-            and (prev["close"] < lower_band)
+                np.isfinite(prev_lower)
+                and np.isfinite(lower_band)
+                and (prev2["close"] > prev_lower)
+                and (prev["close"] < lower_band)
         )
         print(
             f"[{now_str()}] MR_FX DEBUG {name} "
@@ -2255,6 +2257,7 @@ def run_mr_fx(cfg, state, allow_entries):
 
         processed[name] = bar_id
 
+
 # ==========================
 # MAIN LOOP
 # ==========================
@@ -2270,7 +2273,7 @@ def main():
         event_log_csv_path=os.path.join(BASE_DIR, "logs/execution_events.csv"),
         lifecycle_log_csv_path=os.path.join(BASE_DIR, "logs/trade_lifecycle.csv"),
     )
-    
+
     ensure_log_dirs(cfg)
 
     state = load_state()
@@ -2310,7 +2313,7 @@ def main():
         print(f"{m['name']} TF_FX magic={magic_for(m['name'], 'TF_FX')}")
     for m in MR_FX_MARKETS:
         print(f"{m['name']} MR_FX magic={magic_for(m['name'], 'MR_FX')}")
-    
+
     print("\n--- REGIME MARKET MULTIPLIERS ---")
     for k, v in REGIME_MARKET_MULTIPLIERS.items():
         print(f"{k}: {v}")
@@ -2346,7 +2349,8 @@ def main():
             equity = float(snap["equity"])
 
             today = broker_today_str()
-            if state.get("day_start_date") != today or state.get("day_start_equity") is None or state.get("day_start_balance") is None:
+            if state.get("day_start_date") != today or state.get("day_start_equity") is None or state.get(
+                    "day_start_balance") is None:
                 state["day_start_date"] = today
                 state["day_start_equity"] = float(equity)
                 state["day_start_balance"] = float(snap["balance"])
