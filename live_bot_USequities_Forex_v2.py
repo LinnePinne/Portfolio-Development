@@ -57,6 +57,7 @@ TF_FX_MARKETS = [
 MR_FX_MARKETS = [
     {"name": "EURCHF", "symbol": "EURCHF"},
     {"name": "EURCAD", "symbol": "EURCAD"},
+    {"name": "GBPCHF", "symbol": "GBPCHF"},
     {"name": "EURUSD", "symbol": "EURUSD"},
     {"name": "USDCHF", "symbol": "USDCHF"},
 ]
@@ -91,6 +92,7 @@ TF_FX_MARKET_WEIGHTS = {
 MR_FX_MARKET_WEIGHTS = {
     "EURCHF": 0.229429,
     "EURCAD": 0.205126,
+    "GBPCHF": 0.196246,
     "EURUSD": 0.190355,
     "USDCHF": 0.178844,
 }
@@ -113,6 +115,7 @@ REGIME_MARKET_MULTIPLIERS = {
     ("ExtremeVol", "MR_FX", "USDCHF"): 1.00,
     ("ExtremeVol", "MR_FX", "EURUSD"): 1.00,
     ("ExtremeVol", "MR_FX", "EURCHF"): 1.00,
+    ("ExtremeVol", "MR_FX", "GBPCHF"): 1.00,
     ("ExtremeVol", "MR_FX", "EURCAD"): 0.65,
 
     ("LowVol", "TF_FX", "EURJPY"): 0.35,
@@ -160,6 +163,7 @@ MAX_ENTRY_DRIFT = {
     "MR_FX": {
         "EURCHF": 0.0008,
         "EURCAD": 0.0012,
+        "GBPCHF": 0.0012,
         "EURUSD": 0.0008,
         "USDCHF": 0.0008,
     },
@@ -179,12 +183,18 @@ MR_EQ_PARAMS = dict(
 )
 
 TF_FX_PARAMS = dict(
+    # Backtest match: signal bar must be inside 08:00 <= t < 09:00.
+    # Live entry is only allowed on the next H1 bar open via next-bar guard.
     session_start="08:00:00",
     session_end="09:00:00",
 )
 
 MR_FX_PARAMS = dict(
-    session_start="01:00:00",
+    # Backtest match: signal bar must be inside 00:00 <= t < 07:00.
+    # Live entry is only allowed on the next H1 bar open via next-bar guard.
+    # Valid signal bars: 00:00, 01:00, 02:00, 03:00, 04:00, 05:00, 06:00.
+    # Valid entry bars:  01:00, 02:00, 03:00, 04:00, 05:00, 06:00, 07:00.
+    session_start="00:00:00",
     session_end="07:00:00",
     vwap_reset="20:00:00",
     entry_std=2.25,
@@ -324,8 +334,9 @@ MAGIC_MAP = {
 
     ("EURCHF", "MR_FX"): 41001,
     ("EURCAD", "MR_FX"): 41002,
-    ("EURUSD", "MR_FX"): 41003,
-    ("USDCHF", "MR_FX"): 41004,
+    ("GBPCHF", "MR_FX"): 41003,
+    ("EURUSD", "MR_FX"): 41004,
+    ("USDCHF", "MR_FX"): 41005,
 }
 
 
@@ -636,6 +647,59 @@ def in_session(ts: pd.Timestamp, session_start: str, session_end: str) -> bool:
     if start_t < end_t:
         return (t >= start_t) and (t < end_t)
     return (t >= start_t) or (t < end_t)
+
+
+def h1_bar_context(df: pd.DataFrame):
+    """
+    MT5 H1 data convention used by this bot:
+      df.iloc[-1] = current/forming H1 bar
+      df.iloc[-2] = latest closed signal bar
+      df.iloc[-3] = bar before signal bar
+    """
+    if df.empty or len(df) < 3:
+        return None
+
+    return {
+        "current_bar_ts": pd.Timestamp(df.index[-1]),
+        "signal_bar_ts": pd.Timestamp(df.index[-2]),
+        "prev_signal_bar_ts": pd.Timestamp(df.index[-3]),
+        "current_bar": df.iloc[-1],
+        "signal_bar": df.iloc[-2],
+        "prev_signal_bar": df.iloc[-3],
+    }
+
+
+def broker_h1_open_ts() -> pd.Timestamp:
+    """Current broker/server H1 open, rounded down from latest tick time."""
+    now = broker_now()
+    return pd.Timestamp(now.replace(minute=0, second=0, microsecond=0))
+
+
+def next_h1_entry_guard(current_bar_ts: pd.Timestamp, signal_bar_ts: pd.Timestamp) -> Tuple[bool, dict]:
+    """
+    Hard guard against delayed bar-3 entries.
+
+    We only allow a new entry when BOTH are true:
+      1) the data's current/forming bar is exactly the next H1 bar after the signal bar
+      2) broker time is still in that same current/forming H1 bar
+
+    This second check matters because a stale MT5 feed can otherwise show
+    current_bar = signal + 1H even though real broker time has already advanced
+    to the following hour.
+    """
+    current_bar_ts = pd.Timestamp(current_bar_ts)
+    signal_bar_ts = pd.Timestamp(signal_bar_ts)
+    expected_current = signal_bar_ts + pd.Timedelta(hours=1)
+    broker_current = broker_h1_open_ts()
+
+    ok = (current_bar_ts == expected_current) and (broker_current == current_bar_ts)
+    details = {
+        "current_bar": str(current_bar_ts),
+        "signal_bar": str(signal_bar_ts),
+        "expected_current": str(expected_current),
+        "broker_current_h1": str(broker_current),
+    }
+    return bool(ok), details
 
 
 def position_direction(pos) -> Optional[str]:
@@ -1723,9 +1787,20 @@ def run_tf_fx(cfg, state, allow_entries):
 
         df = compute_tf_fx_indicators(df)
 
-        prev = last_closed_bar(df)
-        print(f"NOW={now_str()} | PREV_BAR={prev.name}")
-        bar_id = str(pd.Timestamp(prev.name))
+        ctx = h1_bar_context(df)
+        if ctx is None:
+            continue
+
+        current_bar_ts = ctx["current_bar_ts"]
+        signal_bar_ts = ctx["signal_bar_ts"]
+        prev = ctx["signal_bar"]
+        bar_id = str(signal_bar_ts)
+
+        print(
+            f"[{now_str()}] TF_FX BARCTX {name} "
+            f"current_bar={current_bar_ts} signal_bar={signal_bar_ts} "
+            f"broker_current_h1={broker_h1_open_ts()}"
+        )
 
         if processed.get(name) == bar_id:
             continue
@@ -1738,6 +1813,21 @@ def run_tf_fx(cfg, state, allow_entries):
                     finalize_trade_log(cfg, state, sym, magic, exit_reason)
                     mark_exit_bar(state, sym, magic, bar_id)
 
+            processed[name] = bar_id
+            continue
+
+        entry_bar_ok, entry_bar_details = next_h1_entry_guard(current_bar_ts, signal_bar_ts)
+        if not entry_bar_ok:
+            log_entry_block(
+                cfg=cfg,
+                strategy="TF_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="BAR_NOT_NEXT_OPEN",
+                bar_id=bar_id,
+                extra=entry_bar_details,
+            )
             processed[name] = bar_id
             continue
 
@@ -1917,9 +2007,21 @@ def run_mr_fx(cfg, state, allow_entries):
 
         df = compute_mr_fx_indicators(df)
 
-        prev = last_closed_bar(df)
-        prev2 = prev_closed_bar(df)
-        bar_id = str(pd.Timestamp(prev.name))
+        ctx = h1_bar_context(df)
+        if ctx is None:
+            continue
+
+        current_bar_ts = ctx["current_bar_ts"]
+        signal_bar_ts = ctx["signal_bar_ts"]
+        prev = ctx["signal_bar"]
+        prev2 = ctx["prev_signal_bar"]
+        bar_id = str(signal_bar_ts)
+
+        print(
+            f"[{now_str()}] MR_FX BARCTX {name} "
+            f"current_bar={current_bar_ts} signal_bar={signal_bar_ts} "
+            f"broker_current_h1={broker_h1_open_ts()}"
+        )
 
         if processed.get(name) == bar_id:
             continue
@@ -1932,6 +2034,21 @@ def run_mr_fx(cfg, state, allow_entries):
                     finalize_trade_log(cfg, state, sym, magic, exit_reason)
                     mark_exit_bar(state, sym, magic, bar_id)
 
+            processed[name] = bar_id
+            continue
+
+        entry_bar_ok, entry_bar_details = next_h1_entry_guard(current_bar_ts, signal_bar_ts)
+        if not entry_bar_ok:
+            log_entry_block(
+                cfg=cfg,
+                strategy="MR_FX",
+                market=name,
+                symbol=sym,
+                magic=magic,
+                reason="BAR_NOT_NEXT_OPEN",
+                bar_id=bar_id,
+                extra=entry_bar_details,
+            )
             processed[name] = bar_id
             continue
 
@@ -2326,3 +2443,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
