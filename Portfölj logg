@@ -619,4 +619,6 @@ För en trade som tas idag under 00:00–07:00 ska vi inte använda dagens ofär
 ska regime baseras på EURUSD daily data till och med måndagens stängning.
 Så för VWAP MR forex ska vi ta bort GBPCHF och lägga till global EURUSD regime risk multiplier, vi ska även ändra ERC definitionen så att den
 blir rullande. Rullande ERC vikter ska även göras för de andra strategier som är viktat enligt ERC men det fixar vi när vi gått igenom projekt-
-förbättringar för de också.
+förbättringar för de också. Vi måste också fixa signal logiken för VWAP MR forex, det är möjligt att vi exekverar en bar senare än vad vi ska,
+sen ska vi ändra session_start från 01:00 till 00:00 så att signal-session är 00:00 till 07:00, sen lägger vi till ett exekveringsfönster från
+01:00 till 08:00. Detta kan också vara anledningen till varför OR Breakout TF Forex inte tar några trades.
