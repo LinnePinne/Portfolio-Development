@@ -687,14 +687,12 @@ def next_h1_entry_guard(current_bar_ts: pd.Timestamp, signal_bar_ts: pd.Timestam
     current_bar_ts = pd.Timestamp(current_bar_ts)
     signal_bar_ts = pd.Timestamp(signal_bar_ts)
     expected_current = signal_bar_ts + pd.Timedelta(hours=1)
-    broker_current = broker_h1_open_ts()
 
-    ok = (current_bar_ts == expected_current) and (broker_current == current_bar_ts)
+    ok = current_bar_ts == expected_current
     details = {
         "current_bar": str(current_bar_ts),
         "signal_bar": str(signal_bar_ts),
         "expected_current": str(expected_current),
-        "broker_current_h1": str(broker_current),
     }
     return bool(ok), details
 
