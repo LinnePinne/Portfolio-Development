@@ -665,37 +665,39 @@ def h1_bar_context(df: pd.DataFrame):
         "prev_signal_bar": df.iloc[-3],
     }
 
-
 def broker_h1_open_ts() -> pd.Timestamp:
     """Current broker/server H1 open, rounded down from latest tick time."""
     now = broker_now()
     return pd.Timestamp(now.replace(minute=0, second=0, microsecond=0))
 
 
-def next_h1_entry_guard(current_bar_ts: pd.Timestamp, signal_bar_ts: pd.Timestamp) -> Tuple[bool, dict]:
+def next_h1_entry_guard(current_bar_ts, signal_bar_ts):
     """
-    Hard guard against delayed bar-3 entries.
-
-    We only allow a new entry when BOTH are true:
-      1) the data's current/forming bar is exactly the next H1 bar after the signal bar
-      2) broker time is still in that same current/forming H1 bar
-
-    This second check matters because a stale MT5 feed can otherwise show
-    current_bar = signal + 1H even though real broker time has already advanced
-    to the following hour.
+    Tillåt entry ENDAST på första stängda H1-baren efter signalbaren.
+    Ex:
+        signal 08:00 -> entry tillåten på 09:00
+        signal 08:00 -> blockera 10:00+
     """
+
     current_bar_ts = pd.Timestamp(current_bar_ts)
     signal_bar_ts = pd.Timestamp(signal_bar_ts)
+
     expected_current = signal_bar_ts + pd.Timedelta(hours=1)
 
     ok = current_bar_ts == expected_current
+
     details = {
         "current_bar": str(current_bar_ts),
         "signal_bar": str(signal_bar_ts),
         "expected_current": str(expected_current),
+        "reason": (
+            "ok"
+            if ok
+            else "not_next_bar"
+        ),
     }
-    return bool(ok), details
 
+    return ok, details
 
 def position_direction(pos) -> Optional[str]:
     if pos is None:
