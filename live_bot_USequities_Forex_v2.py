@@ -446,7 +446,7 @@ def reconcile_on_startup(state):
         state["day_start_date"] = today
         state["day_start_equity"] = None
         state["day_start_balance"] = None
-        state["day_peak_balance_reference"] = None
+        state["day_ftmo_daily_reference"] = None
         state["risk_flattened_today"] = False
         state["market_regime_cache"] = {}
 
@@ -665,39 +665,39 @@ def h1_bar_context(df: pd.DataFrame):
         "prev_signal_bar": df.iloc[-3],
     }
 
+
 def broker_h1_open_ts() -> pd.Timestamp:
     """Current broker/server H1 open, rounded down from latest tick time."""
     now = broker_now()
     return pd.Timestamp(now.replace(minute=0, second=0, microsecond=0))
 
 
-def next_h1_entry_guard(current_bar_ts, signal_bar_ts):
+def next_h1_entry_guard(current_bar_ts: pd.Timestamp, signal_bar_ts: pd.Timestamp) -> Tuple[bool, dict]:
     """
-    Tillåt entry ENDAST på första stängda H1-baren efter signalbaren.
-    Ex:
-        signal 08:00 -> entry tillåten på 09:00
-        signal 08:00 -> blockera 10:00+
-    """
+    Hard guard against delayed bar-3 entries.
 
+    We only allow a new entry when BOTH are true:
+      1) the data's current/forming bar is exactly the next H1 bar after the signal bar
+      2) broker time is still in that same current/forming H1 bar
+
+    This second check matters because a stale MT5 feed can otherwise show
+    current_bar = signal + 1H even though real broker time has already advanced
+    to the following hour.
+    """
     current_bar_ts = pd.Timestamp(current_bar_ts)
     signal_bar_ts = pd.Timestamp(signal_bar_ts)
-
     expected_current = signal_bar_ts + pd.Timedelta(hours=1)
+    broker_current = broker_h1_open_ts()
 
-    ok = current_bar_ts == expected_current
-
+    ok = (current_bar_ts == expected_current) and (broker_current == current_bar_ts)
     details = {
         "current_bar": str(current_bar_ts),
         "signal_bar": str(signal_bar_ts),
         "expected_current": str(expected_current),
-        "reason": (
-            "ok"
-            if ok
-            else "not_next_bar"
-        ),
+        "broker_current_h1": str(broker_current),
     }
+    return bool(ok), details
 
-    return ok, details
 
 def position_direction(pos) -> Optional[str]:
     if pos is None:
@@ -1253,19 +1253,44 @@ def has_open_bot_positions() -> bool:
     return len(get_all_bot_positions()) > 0
 
 
-def update_day_peak_balance_reference(state, balance: float):
+def update_day_ftmo_daily_reference(state, balance: float):
     """
-    FTMO-style internal risk reference:
-    starts from balance at midnight, but if balance increases during the day,
-    the reference ratchets upward.
-    """
-    ref = state.get("day_peak_balance_reference")
-    if ref is None:
-        state["day_peak_balance_reference"] = float(balance)
-        return
+    FTMO-style daily loss reference.
 
-    if float(balance) > float(ref):
-        state["day_peak_balance_reference"] = float(balance)
+    FTMO's daily loss limit is not based on intraday equity high.
+    Open profits do not increase the limit. Closed profits do, because
+    they increase account balance.
+
+    Therefore the reference is:
+        max(day_start_balance, current_balance)
+
+    This matches: start-of-day balance + any closed profit during the day,
+    while never lowering the reference after closed losses.
+    """
+    balance = float(balance)
+
+    day_start_raw = state.get("day_start_balance")
+    if day_start_raw is None:
+        day_start_balance = balance
+        state["day_start_balance"] = float(balance)
+    else:
+        day_start_balance = float(day_start_raw)
+
+    ref = max(day_start_balance, balance)
+    state["day_ftmo_daily_reference"] = float(ref)
+    return ref
+
+
+def daily_loss_from_ftmo_reference(state, equity: float) -> float:
+    ref = state.get("day_ftmo_daily_reference")
+    if ref is None:
+        return 0.0
+
+    ref = float(ref)
+    if ref <= 0:
+        return 0.0
+
+    return float(equity) / ref - 1.0
 
 
 def day_drawdown(day_start, equity):
@@ -1287,37 +1312,32 @@ def risk_gate(state, snap, cfg=None):
       allow_entries: bool
       must_flatten: bool
 
-    Rule:
-      Flatten all if equity is <= 4% below today's highest balance reference.
-      Balance reference starts at midnight balance and ratchets upward if
-      account balance increases during the day.
+    FTMO-style daily loss rule:
+      Reference = max(day_start_balance, current_balance)
+
+    This means:
+      - open profits do NOT raise the daily loss reference
+      - closed profits DO raise the daily loss reference
+      - closed losses do NOT lower the reference below day_start_balance
+      - open losses count through current equity
+
+    Internal soft cutoff uses SOFT_CUTOFF_DAILY (-4.5%) to flatten before
+    the real -5% daily loss limit.
     """
     equity = float(snap["equity"])
     balance = float(snap["balance"])
 
-    # Update today's highest balance reference
-    update_day_peak_balance_reference(state, balance)
+    ftmo_ref = update_day_ftmo_daily_reference(state, balance)
+    day_start_balance = float(state.get("day_start_balance") or balance)
 
-    ref_raw = state.get("day_peak_balance_reference")
-    day_start_raw = state.get("day_start_balance")
+    # Internal daily kill threshold: -4.5% from FTMO-style daily reference
+    soft_floor = ftmo_ref * (1.0 + SOFT_CUTOFF_DAILY)  # SOFT_CUTOFF_DAILY = -0.045
 
-    if ref_raw is None:
-        ref_balance = balance
-        state["day_peak_balance_reference"] = float(balance)
-    else:
-        ref_balance = float(ref_raw)
-
-    if day_start_raw is None:
-        day_start_balance = balance
-        state["day_start_balance"] = float(balance)
-    else:
-        day_start_balance = float(day_start_raw)
-
-    # Internal daily kill threshold: -4.5% from intraday highest balance reference
-    soft_floor = ref_balance * (1.0 + SOFT_CUTOFF_DAILY)  # SOFT_CUTOFF_DAILY = -0.045
-
-    # Absolute max loss floor (still keep this if you want account-wide protection)
+    # Absolute max loss floor (account-wide protection)
     max_floor = START_BALANCE * (1.0 - MAX_LOSS_LIMIT_ABS_FRAC)
+
+    daily_loss_pct = equity / ftmo_ref - 1.0 if ftmo_ref > 0 else 0.0
+    max_loss_pct = equity / START_BALANCE - 1.0 if START_BALANCE > 0 else 0.0
 
     must_flatten = False
     allow_entries = True
@@ -1326,7 +1346,7 @@ def risk_gate(state, snap, cfg=None):
     if state.get("risk_flattened_today", False):
         allow_entries = False
 
-    # Daily rule breach based on equity vs intraday peak balance reference
+    # Daily rule breach based on equity vs FTMO-style daily reference
     if equity <= soft_floor:
         must_flatten = True
         allow_entries = False
@@ -1335,12 +1355,15 @@ def risk_gate(state, snap, cfg=None):
     if equity <= max_floor:
         must_flatten = True
         allow_entries = False
+
     if debug:
         print(
             f"[RISK] balance={balance:.2f} equity={equity:.2f} "
             f"day_start_balance={day_start_balance:.2f} "
-            f"peak_balance_ref={ref_balance:.2f} "
+            f"ftmo_daily_ref={ftmo_ref:.2f} "
+            f"daily_loss={daily_loss_pct:.2%} "
             f"soft_floor={soft_floor:.2f} max_floor={max_floor:.2f} "
+            f"max_loss={max_loss_pct:.2%} "
             f"allow_entries={allow_entries} must_flatten={must_flatten}"
         )
 
@@ -2281,7 +2304,7 @@ def main():
     state.setdefault("day_start_equity", None)
     state.setdefault("day_start_date", None)
     state.setdefault("day_start_balance", None)
-    state.setdefault("day_peak_balance_reference", None)
+    state.setdefault("day_ftmo_daily_reference", None)
     state.setdefault("risk_flattened_today", False)
     state.setdefault("tf_eq_bc", {})
     state.setdefault("mr_eq_processed_d1", {})
@@ -2354,7 +2377,7 @@ def main():
                 state["day_start_date"] = today
                 state["day_start_equity"] = float(equity)
                 state["day_start_balance"] = float(snap["balance"])
-                state["day_peak_balance_reference"] = float(snap["balance"])
+                state["day_ftmo_daily_reference"] = float(snap["balance"])
                 state["risk_flattened_today"] = False
                 state["market_regime_cache"] = {}
                 state["entries_today"] = {}
@@ -2416,13 +2439,19 @@ def main():
             now = time.time()
             if now - last_heartbeat > HEARTBEAT_EVERY_SEC:
                 last_heartbeat = now
-                dd = day_drawdown(state["day_start_equity"], equity)
+                dd_start_equity = day_drawdown(state["day_start_equity"], equity)
+                dd_ftmo_daily = daily_loss_from_ftmo_reference(state, equity)
+                ftmo_ref = float(state.get("day_ftmo_daily_reference") or state.get("day_start_balance") or 0.0)
+                soft_floor = ftmo_ref * (1.0 + SOFT_CUTOFF_DAILY) if ftmo_ref > 0 else 0.0
                 dd_bucket = dd_bucket_from_balance(equity, START_BALANCE)
                 dd_mult = dynamic_exposure_multiplier(equity, START_BALANCE)
 
                 print(
-                    f"[{now_str()}] equity={equity:.2f} dd={dd:.2%} allow={allow} "
-                    f"dd_bucket={dd_bucket} dd_mult={dd_mult:.2f}"
+                    f"[{now_str()}] equity={equity:.2f} "
+                    f"dd_start_eq={dd_start_equity:.2%} "
+                    f"dd_ftmo_daily={dd_ftmo_daily:.2%} "
+                    f"ftmo_ref={ftmo_ref:.2f} soft_floor={soft_floor:.2f} "
+                    f"allow={allow} dd_bucket={dd_bucket} dd_mult={dd_mult:.2f}"
                 )
 
 
@@ -2447,4 +2476,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
