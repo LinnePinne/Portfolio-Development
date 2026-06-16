@@ -672,30 +672,44 @@ def broker_h1_open_ts() -> pd.Timestamp:
     return pd.Timestamp(now.replace(minute=0, second=0, microsecond=0))
 
 
+MAX_ENTRY_DELAY_FROM_H1_OPEN_SEC = 420  # 7 min, justera till t.ex. 120 om ni vill vara striktare
+
+
+def seconds_since_stockholm_h1_open() -> float:
+    now = datetime.now(ZoneInfo("Europe/Stockholm"))
+    return now.minute * 60 + now.second + now.microsecond / 1_000_000
+
+
 def next_h1_entry_guard(current_bar_ts: pd.Timestamp, signal_bar_ts: pd.Timestamp) -> Tuple[bool, dict]:
     """
-    Hard guard against delayed bar-3 entries.
+    Tillåt entry bara om:
+      1) current/forming bar är exakt nästa H1-bar efter signalbaren
+      2) boten kör nära öppningen av H1-baren
 
-    We only allow a new entry when BOTH are true:
-      1) the data's current/forming bar is exactly the next H1 bar after the signal bar
-      2) broker time is still in that same current/forming H1 bar
-
-    This second check matters because a stale MT5 feed can otherwise show
-    current_bar = signal + 1H even though real broker time has already advanced
-    to the following hour.
+    Viktigt:
+    Vi jämför inte längre mot broker_current_h1 eftersom MT5 tick-time och
+    OHLC-index uppenbart ligger i olika tidsbas i live-loggen.
     """
     current_bar_ts = pd.Timestamp(current_bar_ts)
     signal_bar_ts = pd.Timestamp(signal_bar_ts)
-    expected_current = signal_bar_ts + pd.Timedelta(hours=1)
-    broker_current = broker_h1_open_ts()
 
-    ok = (current_bar_ts == expected_current) and (broker_current == current_bar_ts)
+    expected_current = signal_bar_ts + pd.Timedelta(hours=1)
+
+    sequence_ok = current_bar_ts == expected_current
+    delay_sec = seconds_since_stockholm_h1_open()
+    open_window_ok = delay_sec <= MAX_ENTRY_DELAY_FROM_H1_OPEN_SEC
+
+    ok = sequence_ok and open_window_ok
+
     details = {
         "current_bar": str(current_bar_ts),
         "signal_bar": str(signal_bar_ts),
         "expected_current": str(expected_current),
-        "broker_current_h1": str(broker_current),
+        "sequence_ok": sequence_ok,
+        "seconds_since_h1_open": round(delay_sec, 2),
+        "max_delay_sec": MAX_ENTRY_DELAY_FROM_H1_OPEN_SEC,
     }
+
     return bool(ok), details
 
 
@@ -1836,6 +1850,11 @@ def run_tf_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
+        signal = tf_fx_entry(name, prev)
+        if signal is None:
+            processed[name] = bar_id
+            continue
+
         entry_bar_ok, entry_bar_details = next_h1_entry_guard(current_bar_ts, signal_bar_ts)
         if not entry_bar_ok:
             log_entry_block(
@@ -1845,14 +1864,10 @@ def run_tf_fx(cfg, state, allow_entries):
                 symbol=sym,
                 magic=magic,
                 reason="BAR_NOT_NEXT_OPEN",
+                signal=signal,
                 bar_id=bar_id,
                 extra=entry_bar_details,
             )
-            processed[name] = bar_id
-            continue
-
-        signal = tf_fx_entry(name, prev)
-        if signal is None:
             processed[name] = bar_id
             continue
 
@@ -2058,6 +2073,11 @@ def run_mr_fx(cfg, state, allow_entries):
             processed[name] = bar_id
             continue
 
+        signal = mr_fx_entry(prev, prev2)
+        if signal is None:
+            processed[name] = bar_id
+            continue
+
         entry_bar_ok, entry_bar_details = next_h1_entry_guard(current_bar_ts, signal_bar_ts)
         if not entry_bar_ok:
             log_entry_block(
@@ -2067,13 +2087,12 @@ def run_mr_fx(cfg, state, allow_entries):
                 symbol=sym,
                 magic=magic,
                 reason="BAR_NOT_NEXT_OPEN",
+                signal=signal,
                 bar_id=bar_id,
                 extra=entry_bar_details,
             )
             processed[name] = bar_id
             continue
-
-        signal = mr_fx_entry(prev, prev2)
 
         ###
         entry_std = MR_FX_PARAMS["entry_std"]
@@ -2126,9 +2145,7 @@ def run_mr_fx(cfg, state, allow_entries):
         )
         ###
 
-        if signal is None:
-            processed[name] = bar_id
-            continue
+     
 
         signal_price = float(prev["close"])
 
@@ -2476,6 +2493,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
