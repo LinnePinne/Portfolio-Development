@@ -633,3 +633,6 @@ vi sätter MR_FX_MARKET_WEIGHTS = {
     "EURUSD": 0.26,
     "USDCHF": 0.22,
 }
+(2026-06-23) Nu är projektförbättringarna helt klara för alla fyra strategier. TF Forex har helt tagits bort pågrund av statistisk insignifikans
+och ojämn edge distribution. MR Forex har samma parametrar som förut med Session: 00:00–07:00, VWAP reset: 20:00, Entry: 2.25 STD från 
+VWAP, Exit: 0.75 STD från VWAP, däremot har vi valt att ta bort GBPCHF samt lägga 
