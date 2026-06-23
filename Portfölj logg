@@ -635,4 +635,12 @@ vi sätter MR_FX_MARKET_WEIGHTS = {
 }
 (2026-06-23) Nu är projektförbättringarna helt klara för alla fyra strategier. TF Forex har helt tagits bort pågrund av statistisk insignifikans
 och ojämn edge distribution. MR Forex har samma parametrar som förut med Session: 00:00–07:00, VWAP reset: 20:00, Entry: 2.25 STD från 
-VWAP, Exit: 0.75 STD från VWAP, däremot har vi valt att ta bort GBPCHF samt lägga 
+VWAP, Exit: 0.75 STD från VWAP, däremot har vi valt att ta bort GBPCHF samt lägga till ett EURUSD baserat regime risk multiplier som baseras på
+EURUSDs trendighet och volatilitet, defnitionen för detta filter förklarades i denna journal (2026-05-28). Vi har bestämt att skala ner hela 
+strategin till 0.75 i en sådan regime och att logga resultat för filtret i 3-6 månader. I backtesten var EURCAD fortfarande positiv i regimen så
+det är möjligt att vi efter dessa 3-6 månader tar bort filtret för just den, men nu i början kör vi för hela strategin. TF Equities har 
+robusthetsvaliderats och det vi ändrat på där är parametervariationerna från EMA 70/120, ADX 15, Exit 10 till EMA 70/160, ADX 20, Exit 12.
+Detta minskade trade count, förbättrade PF/expectancy och filtrerade bort en stor del av svaga trendförsök, särskilt ADX 15–20 och 
+2022-liknande miljöer. TF_EQ ska i portföljkonstruktionen behandlas som ett samlat long-only US-equity trend cluster, inte som tre oberoende
+marknadsstrategier. För MR Equities har vi ändrat parametervariationen från 20(EMA_FAST) / 250(EMA_SLOW) / 0.20(PULLBACK RANGE) till 
+30 / 150 / 0.20. Nu kommer vi börja konstruera portföljen på nytt med rullande ERC vikter.
