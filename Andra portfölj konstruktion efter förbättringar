@@ -1,0 +1,90 @@
+Vi skissar en arbetsplan som ser ut såhär:
+Fas 1 — Frys nya strategiuniversumet
+Först ska vi inte vikta någonting. Vi ska bara skapa en ny ren baseline där varje strategi körs exakt enligt nya beslut.
+TF_EQ	Aktiv, med nya 70/160/20/12, behandlas som ett samlat US-equity trendcluster
+MR_EQ	Aktiv med nya 30/150/0.20-parametrar
+MR_FX	Aktiv, utan GBPCHF, med EURUSD-regime multiplier
+
+Fas 2 - Bygga den nya backtest motorn med ny baseline
+När den nya backtest motorn är klar vill vi få fram metrik i outputen så vi kan jämföra nya baseline med den förra portföljen. Först testar vi med equal weights, sedan med de gamla vikterna vi 
+hade från förra baseline och jämför.
+
+Fas 3 - Attribution innan viktoptimering
+Innan vi går in på viktoptimering vill vi svara på dessa frågor:
+Vilken strategi driver avkastning?
+Vilken strategi driver drawdown?
+Vilken strategi driver daily-loss breach?
+Vilka strategier förlorar samtidigt?
+Ger MR_FX-regimefiltret lägre risk utan att förstöra edge?
+Blir TF_EQ för korrelerad internt när den behandlas som cluster?
+Vi kommer precis som tidigare behandla varje strategi som ett cluster där vikterna bestäms internt över marknaderna som ingår i respektive strategi.
+
+Fas 4 — Rullande ERC och viktmetoder
+Först efter clean baseline + attribution bör vi bygga nya vikter. Vi jämför olika typer av viktmetoder:
+| Viktmetod             | Kommentar                      |
+| --------------------- | ------------------------------ |
+| Equal strategy budget | benchmark                      |
+| Inverse vol           | enkel och robust               |
+| Rolling ERC 252 dagar | snabbare adaptiv               |
+| Rolling ERC 756 dagar | stabilare, mindre brus         |
+| Cluster ERC           | bäst metod för TF_EQ-problemet |
+
+Portfolio
+ ├── TF_EQ cluster
+ │    ├── US500
+ │    ├── US100
+ │    └── US30
+ ├── MR_EQ cluster
+ │    ├── US500
+ │    ├── US100
+ │    └── US30
+ └── MR_FX cluster
+      ├── EURUSD
+      ├── EURCHF
+      ├── EURCAD
+      └── USDCHF
+
+Fas 5 — Regime multiplier för MR_FX
+MR_FX-filtret ska implementeras enligt instruktionen: EURUSD daily data, slope via MA jämfört med 20 dagar bakåt, trend_down om slope < -0.25%, realiserad 20-dagars vol annualiserad,
+klassificerad via historiska 33/66-kvantiler, och live ska bara senaste färdigstängda daily candle användas. Detta ska införas i baseline backtest i början av arbetet men här ska vi
+kolla på två separata backtests, portfölj backtest utan regime multiplier för MR_FX och sedan MR_FX med 0.75 i trend_down + mid_vol. Detta i syfte om att se faktisk effekt.
+Sedan mäter vi:
+MR_FX return delta
+MR_FX DD delta
+Portfolio DD delta
+Worst daily DD delta
+FTMO pass-rate delta
+Trade count unaffected? Ja/nej
+Om filtret bara sänker return men inte sänker tail-risk, ska det inte användas. Om det sänker worst-day / DD tydligt med liten return-kostnad, då är det värt att behålla.
+
+Fas 6 - Exposure optimering
+Här gör vi precis som förra gången, vi simulerar FTMO challenge till payout genom bootstrapping/payout med FTMO regler och optimerar utefter tid till payout relativt sannolikhet 
+till payout
+
+Fas 7 - Stress/Kill-test
+När vi har 2-3 portföljkandidater för exposure ska vi försöka döda dem med 2x och 3x spread/slippage, remove best 5/10/20 trades, remove best year, crisis-only DD, random missed 
+trades 10-20%, delayed entries 1 bar. Den kandidat som har högst CAGR i baseline men dör här ska bort. Den portfölj som är lite långsammare men överlever stressen är bättre.
+
+Fas 8 — Välj “Production Candidate” och sedan livebot-implementation
+När portföljkandidaten är vald ska vi först frysa:
+Strategy universe
+Strategy params
+Market list
+Cluster weights / rolling ERC method
+Regime multiplier
+Exposure factor EVAL/FUNDED
+Daily loss guard
+Max gross exposure cap
+Per-symbol max entries
+Live logging fields
+Först därefter ska vi ändra liveboten.
+
+Så planen ser ut såhär:
+Fas 1 — Frys nya strategiuniversumet
+Fas 2 - Bygga den nya backtest motorn med ny baseline
+Fas 3 - Attribution innan viktoptimering
+Fas 4 — Rullande ERC och viktmetoder
+Fas 5 — Regime multiplier för MR_FX
+Fas 6 - Exposure optimering
+Fas 7 - Stress/Kill-test
+Fas 8 — Välj “Production Candidate” och sedan livebot-implementation
