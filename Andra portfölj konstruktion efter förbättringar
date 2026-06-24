@@ -353,7 +353,7 @@ Name: Delta_RegimeMinusBaseline, dtype: float64
 --- WORST INTRADAY DD DAYS: regime case should be inspected in full run if delta is promising. ---
 Set RUN_PLOTS=True and RUN_FTMO_BOOTSTRAP=True for production-candidate evaluation.
 
-Regime multiplier är lovande, den förbättrar CAGR, Sharpe, Calmar och total max drawdown, men den förbättrar inte worst intraday day eller antal -5%-breaches.
+Regime multiplier är lovande, den förbättrar CAGR, Sharpe, Calmar och total max drawdown, men den förbättrar inte worst intraday dd eller antal -5%-breaches.
 Baseline utan filter:
 CAGR: 23.32%
 Max DD: -20.83%
@@ -367,6 +367,179 @@ Sharpe: 1.43
 WorstDayDD: -8.71%
 -5% breach-dagar: 8
 Så filtret är inte en return-kostnad. Det är faktiskt positivt här: equity end ökar med cirka 32.5k, max DD förbättras med 2.57 procentenheter, Sharpe förbättras och Calmar går från 1.12 till 1.29.
+Att det inte förbättrar worst intraday drawdown gör inget eftersom vi kommer ha ett skydd för -5% breaches i våran livebot, antingen att vi likviderar alla öppna positoner när daily dd börjar närma 
+sig gränsen (exempelvis vid -4,5% som vi har i vår existerande bot) eller en soft cutoff runt -3% där vi inte tillåter fler entries den dagen, eller en kombination av båda. Hur som helst kommer vi 
+vilja lägga till detta i den kommande FTMO simulationen för att vikt och exposure omptimera funded effektiviteten på ett så realistiskt sätt som möjligt. TF_EQ och MR_EQ får högre PnL i scenariot 
+med regime filter vilket inte behöver vara en bugg eftersom det troligtvis beror på att position sizing baseras på aktuell equity så när MR_FX-regimefiltret förbättrar equity kurvan ändras framtid
+sizing för de andra strategierna. Men för att analysera attribution blir det otydligare, därför bör vi göra en renare jämförelse med compounded portfölj resultat, non-compounded PnL för strategierna,
+daily return contribution per strategi och breach-day contribution per strategi. Nästa steg bör alltså vara att bygga en breach-attribution report. För varje dag där intraday DD går under exempelvis
+-4%, -5% eller -8%, vill vi skriva ut:
+date
+min_intraday_dd
+day_start_equity
+strategy_pnl_day:
+    TF_EQ
+    MR_EQ
+    MR_FX
+market_pnl_day:
+    US500
+    US100
+    US30
+    EURUSD
+    USDCHF
+    EURCHF
+    EURCAD
+open exposure at worst timestamp
+gross exposure at worst timestamp
+EURUSD regime label
+MR_FX multiplier
+För just nu vet vi bara att filtret förbättrar total DD, men inte worst-day. Då måste vi ta reda på om worst-day kommer från exempelvis:
+TF_EQ i equity-crash
+MR_EQ gap-/reversal-risk
+MR_FX i fel regim
+flera strategier samtidigt
+för hög gross exposure
+compounding/exposure-scaling
+eller något annat.
+================ CASE: BASELINE_NO_MR_FX_REGIME_MULTIPLIER ================
+--- BREACH ATTRIBUTION <= -4.0% INTRADAY DD ---
+         date      WorstTimestamp  MinIntradayDD        DayPnL  GrossExposureAtWorstPct  OpenPositionsAtWorst  PnLToWorst_TF_EQ  PnLToWorst_MR_EQ  PnLToWorst_MR_FX EURUSD_TrendRegime  \
+0  2025-04-03 2025-04-03 16:00:00      -0.087106 -53344.056437               406.146681                     2          0.000000          0.000000     -72093.464730   trend_flat_or_up   
+1  2020-06-11 2020-06-11 21:00:00      -0.078884 -23570.630236               336.403942                     4     -24326.609502          0.000000      -2917.618852   trend_flat_or_up   
+2  2021-11-26 2021-11-26 16:00:00      -0.078668 -41407.701686               481.691338                     4      -3334.397611      -3545.893090     -36882.928208         trend_down   
+3  2015-01-26 2015-01-26 21:00:00      -0.074138  -5971.634187               310.620044                     3          0.000000        622.322648      -7125.930448         trend_down   
+4  2016-06-24 2016-06-24 06:00:00      -0.060824   -659.842393               870.253129                     5          0.000000          0.000000      -8482.872836   trend_flat_or_up   
+5  2015-08-12 2015-08-12 17:00:00      -0.054792  -3457.063686               390.634412                     2          0.000000          0.000000      -4994.839959         trend_down   
+6  2015-06-23 2015-06-23 22:00:00      -0.052607  -5687.835681               328.318578                     4         92.362136          0.000000      -5870.968775         trend_down   
+7  2013-06-20 2013-06-20 20:00:00      -0.051814  -3313.037472               205.795464                     6      -1686.680559      -1343.622882       -238.379317   trend_flat_or_up   
+8  2013-12-27 2013-12-27 12:00:00      -0.048098  -2868.754770               520.616233                     5        -27.124627          0.000000      -3833.086028   trend_flat_or_up   
+9  2020-09-03 2020-09-03 20:00:00      -0.047472 -16911.103018               109.217593                     3     -19332.083397          0.000000       -258.961148   trend_flat_or_up   
+10 2016-01-04 2016-01-04 16:00:00      -0.046853  -4916.694085               114.059171                     3      -5271.045718          0.000000      -1042.870329   trend_flat_or_up   
+11 2022-02-04 2022-02-04 12:00:00      -0.043995 -12827.972605               566.851355                     5      -5294.606028        531.944017     -13879.425000         trend_down   
+12 2024-08-02 2024-08-02 16:00:00      -0.043923 -27101.243983               301.760891                     4      -7656.887287     -11418.935228     -15196.149507   trend_flat_or_up   
+13 2020-05-01 2020-05-01 17:00:00      -0.042204 -10562.448114               296.912139                     3      -7162.111455          0.000000      -9287.849925   trend_flat_or_up   
+14 2016-08-16 2016-08-16 13:00:00      -0.041171  -5170.661641               499.031173                     5       -376.064396          0.000000      -5783.127060   trend_flat_or_up   
+15 2018-12-04 2018-12-04 22:00:00      -0.040595 -10505.994056               112.561059                     3      -9456.415109          0.000000      -1622.627653         trend_down   
+16 2025-04-10 2025-04-10 20:00:00      -0.040250 -20908.394640               199.555362                     1          0.000000          0.000000     -22226.708179   trend_flat_or_up   
+17 2015-02-02 2015-02-02 10:00:00      -0.040145  -2130.973363               666.908588                     4          0.000000         30.505419      -3868.789850         trend_down   
+   EURUSD_VolRegime  MR_FX_MultiplierUsed  
+0           mid_vol                   1.0  
+1           mid_vol                   1.0  
+2           mid_vol                   1.0  
+3          high_vol                   1.0  
+4          high_vol                   1.0  
+5          high_vol                   1.0  
+6          high_vol                   1.0  
+7           low_vol                   1.0  
+8           low_vol                   1.0  
+9           mid_vol                   1.0  
+10          mid_vol                   1.0  
+11         high_vol                   1.0  
+12          low_vol                   1.0  
+13          mid_vol                   1.0  
+14          mid_vol                   1.0  
+15          mid_vol                   1.0  
+16         high_vol                   1.0  
+17         high_vol                   1.0  
+--- BREACH DRIVER SUMMARY: STRATEGY PnL TO WORST TIMESTAMP ---
+  Driver  TotalOnBreachDays  AvgOnBreachDays  WorstSingleDay  BestSingleDay  NegativeHitRate
+1  MR_FX     -215606.597804    -11978.144322   -72093.464730    -238.379317         1.000000
+2  TF_EQ      -83831.663553     -4657.314642   -24326.609502      92.362136         0.611111
+0  MR_EQ      -15123.679116      -840.204395   -11418.935228     622.322648         0.166667
+--- BREACH DRIVER SUMMARY: MARKET PnL TO WORST TIMESTAMP ---
+   Driver  TotalOnBreachDays  AvgOnBreachDays  WorstSingleDay  BestSingleDay  NegativeHitRate
+2  EURUSD      -90255.027597     -5014.168200   -30793.766743    1428.480281         0.555556
+6  USDCHF      -53390.473210     -2966.137401   -41299.697987    7175.307311         0.500000
+0  EURCAD      -51895.879897     -2883.104439   -21934.621409    2374.387695         0.500000
+4    US30      -36189.097933     -2010.505441   -10375.242642     281.218433         0.555556
+5   US500      -31786.481349     -1765.915630    -7996.274540     341.104215         0.555556
+3   US100      -30979.763387     -1721.097966    -7773.893173      32.568547         0.555556
+1  EURCHF      -20065.217100     -1114.734283    -7858.523676     891.265278         0.444444
+
+================ CASE: MR_FX_REGIME_MULTIPLIER_0.75 ================
+--- BREACH ATTRIBUTION <= -4.0% INTRADAY DD ---
+         date      WorstTimestamp  MinIntradayDD        DayPnL  GrossExposureAtWorstPct  OpenPositionsAtWorst  PnLToWorst_TF_EQ  PnLToWorst_MR_EQ  PnLToWorst_MR_FX EURUSD_TrendRegime  \
+0  2025-04-03 2025-04-03 16:00:00      -0.087106 -55187.007348               406.146681                     2          0.000000          0.000000     -74584.177387   trend_flat_or_up   
+1  2020-06-11 2020-06-11 21:00:00      -0.078884 -23796.135464               336.403942                     4     -24559.347344          0.000000      -2945.532331   trend_flat_or_up   
+2  2015-01-26 2015-01-26 21:00:00      -0.074138  -5926.751642               310.620044                     3          0.000000        617.645298      -7072.372262         trend_down   
+3  2021-11-26 2021-11-26 16:00:00      -0.061958 -33581.817430               371.796852                     4      -3366.298501      -3595.869846     -28079.610233         trend_down   
+4  2016-06-24 2016-06-24 06:00:00      -0.060824   -653.927148               870.253129                     5          0.000000          0.000000      -8406.826997   trend_flat_or_up   
+5  2015-08-12 2015-08-12 17:00:00      -0.054792  -3423.974176               390.634412                     2          0.000000          0.000000      -4947.031524         trend_down   
+6  2015-06-23 2015-06-23 22:00:00      -0.052607  -5633.394192               328.318578                     4         91.478085          0.000000      -5814.774416         trend_down   
+7  2013-06-20 2013-06-20 20:00:00      -0.051814  -3321.563525               205.795464                     6      -1691.021206      -1347.080676       -238.992783   trend_flat_or_up   
+8  2013-12-27 2013-12-27 12:00:00      -0.048098  -2876.137468               520.616233                     5        -27.194432          0.000000      -3842.950418   trend_flat_or_up   
+9  2020-09-03 2020-09-03 20:00:00      -0.047472 -17072.895134               109.217593                     3     -19517.037547          0.000000       -261.438684   trend_flat_or_up   
+10 2016-01-04 2016-01-04 16:00:00      -0.046853  -4858.541384               114.059171                     3      -5208.701887          0.000000      -1030.535674   trend_flat_or_up   
+11 2022-02-04 2022-02-04 12:00:00      -0.043994 -13371.261240               566.835004                     5      -5518.720030        553.997321     -14467.721049         trend_down   
+12 2024-08-02 2024-08-02 16:00:00      -0.043923 -27992.023273               301.760891                     4      -7908.558266     -11794.259365     -15695.625297   trend_flat_or_up   
+13 2020-05-01 2020-05-01 17:00:00      -0.042204 -10663.501300               296.912139                     3      -7230.632897          0.000000      -9376.708759   trend_flat_or_up   
+14 2016-08-16 2016-08-16 13:00:00      -0.041171  -5124.308559               499.031173                     5       -372.693117          0.000000      -5731.283450   trend_flat_or_up   
+15 2025-04-10 2025-04-10 20:00:00      -0.040250 -21630.745873               199.555362                     1          0.000000          0.000000     -22994.605014   trend_flat_or_up   
+16 2015-02-02 2015-02-02 10:00:00      -0.040145  -2114.957059               666.908588                     4          0.000000         30.276142      -3839.712192         trend_down   
+   EURUSD_VolRegime  MR_FX_MultiplierUsed  
+0           mid_vol                  1.00  
+1           mid_vol                  1.00  
+2          high_vol                  1.00  
+3           mid_vol                  0.75  
+4          high_vol                  1.00  
+5          high_vol                  1.00  
+6          high_vol                  1.00  
+7           low_vol                  1.00  
+8           low_vol                  1.00  
+9           mid_vol                  1.00  
+10          mid_vol                  1.00  
+11         high_vol                  1.00  
+12          low_vol                  1.00  
+13          mid_vol                  1.00  
+14          mid_vol                  1.00  
+15         high_vol                  1.00  
+16         high_vol                  1.00  
+--- BREACH DRIVER SUMMARY: STRATEGY PnL TO WORST TIMESTAMP ---
+  Driver  TotalOnBreachDays  AvgOnBreachDays  WorstSingleDay  BestSingleDay  NegativeHitRate
+1  MR_FX     -209329.898470    -12313.523439   -74584.177387    -238.992783         1.000000
+2  TF_EQ      -75308.727142     -4429.925126   -24559.347344      91.478085         0.588235
+0  MR_EQ      -15535.291126      -913.840654   -11794.259365     617.645298         0.176471
+--- BREACH DRIVER SUMMARY: MARKET PnL TO WORST TIMESTAMP ---
+   Driver  TotalOnBreachDays  AvgOnBreachDays  WorstSingleDay  BestSingleDay  NegativeHitRate
+2  EURUSD      -91845.932339     -5402.701902   -31857.641602    1442.146856         0.529412
+6  USDCHF      -51377.073188     -3022.180776   -42726.535786    7423.202579         0.470588
+0  EURCAD      -46957.589427     -2762.211143   -16682.830325    2452.430436         0.529412
+4    US30      -33362.449375     -1962.497022   -10474.504793     279.104807         0.529412
+5   US500      -29117.163159     -1712.774303    -8072.776598     338.540490         0.529412
+3   US100      -28364.405733     -1668.494455    -7848.267661      32.256815         0.529412
+1  EURCHF      -19149.303516     -1126.429619    -7799.459351     922.057052         0.411765
+
+================ BASELINE VS MR_FX REGIME MULTIPLIER ================
+                                     Equity Start     Equity End      CAGR  Sharpe (ann.)    Calmar  Max Drawdown %  WorstDayDD  P(Breach -5%)  Count Breach -5%  Avg Gross Exposure %  \
+Case                                                                                                                                                                                     
+BASELINE_NO_MR_FX_REGIME_MULTIPLIER       50000.0  940486.510332  0.233208       1.399138  1.119752      -20.826728   -0.087106       0.002035                 8            147.735835   
+MR_FX_REGIME_MULTIPLIER_0.75              50000.0  972978.798832  0.236203       1.429451  1.294074      -18.252707   -0.087106       0.002035                 8            146.025810   
+
+                                     Max Gross Exposure %  Count DD <= -4%  Count DD <= -5%  
+Case                                                                                         
+BASELINE_NO_MR_FX_REGIME_MULTIPLIER            969.183771               18                8  
+MR_FX_REGIME_MULTIPLIER_0.75                   969.183771               17                8  
+
+--- DELTA: regime case minus baseline ---
+Equity Start            0.000000e+00
+Equity End              3.249229e+04
+CAGR                    2.995774e-03
+Sharpe (ann.)           3.031261e-02
+Calmar                  1.743217e-01
+Max Drawdown %          2.574021e+00
+WorstDayDD             -6.938894e-17
+P(Breach -5%)           0.000000e+00
+Count Breach -5%        0.000000e+00
+Avg Gross Exposure %   -1.710024e+00
+Max Gross Exposure %   -2.273737e-13
+Count DD <= -4%        -1.000000e+00
+Count DD <= -5%         0.000000e+00
+Name: Delta_RegimeMinusBaseline, dtype: float64
+
+--- NEXT STEP ---
+Inspect breach_attribution_*.csv. If worst days are driven by one cluster, reduce/guard that cluster; if driven by simultaneous losses, reduce total exposure or add portfolio-level daily guard.
+Set RUN_PLOTS=True and RUN_FTMO_BOOTSTRAP=True only after breach drivers are understood.
+Följande data kommer från CSV exports:
 
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
