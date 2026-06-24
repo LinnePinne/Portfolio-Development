@@ -539,7 +539,38 @@ Name: Delta_RegimeMinusBaseline, dtype: float64
 --- NEXT STEP ---
 Inspect breach_attribution_*.csv. If worst days are driven by one cluster, reduce/guard that cluster; if driven by simultaneous losses, reduce total exposure or add portfolio-level daily guard.
 Set RUN_PLOTS=True and RUN_FTMO_BOOTSTRAP=True only after breach drivers are understood.
-Följande data kommer från CSV exports:
+
+Ytterligare data för breach attribution finns i csv filerna i Portfolio-Development, denna data analyseras här:
+Problemet är inte främst MR_FX-regimefiltret. Problemet är att vi kör gamla target-vikter där MR_FX har 8.0 i strategi-budget.
+Nuvarande targets:
+STRATEGY_TARGETS = {
+    "TF_EQ": 1.125,
+    "MR_EQ": 0.875,
+    "MR_FX": 8.0,
+}
+Det betyder att MR_FX får ungefär 80% av total strategi-notional-budget. Då är det inte konstigt att breach-dagarna domineras av MR_FX. För alla dagar under cirka -4% intraday DD:
+| Case                   | Antal breach/near-breach dagar | Dominant strategy     |
+| ---------------------- | -----------------------------: | --------------------- |
+| Utan regime multiplier |                       18 dagar | MR_FX driver 13 av 18 |
+| Med regime multiplier  |                       17 dagar | MR_FX driver 13 av 17 |
+För hårda dagar under -5%:
+| Case                   | Antal -5% dagar | MR_FX negativ | Dominant strategy   |
+| ---------------------- | --------------: | ------------: | ------------------- |
+| Utan regime multiplier |               8 |        8 av 8 | MR_FX driver 6 av 8 |
+| Med regime multiplier  |               8 |        8 av 8 | MR_FX driver 6 av 8 |
+Alltså: MR_FX är med i varje hård breach-dag. De värsta dagarna med regime multiplier är:
+| Datum      | Intraday DD | Huvuddriver                    |
+| ---------- | ----------: | ------------------------------ |
+| 2025-04-03 |      -8.71% | MR_FX, främst USDCHF + EURUSD  |
+| 2020-06-11 |      -7.89% | TF_EQ, främst US30/US500/US100 |
+| 2015-01-26 |      -7.41% | MR_FX, främst EURCHF           |
+| 2021-11-26 |      -6.20% | MR_FX, främst EURCAD + USDCHF  |
+| 2016-06-24 |      -6.08% | MR_FX, flera FX-par            |
+| 2015-08-12 |      -5.48% | MR_FX, främst USDCHF/EURUSD    |
+| 2015-06-23 |      -5.26% | MR_FX, främst EURUSD/EURCAD    |
+| 2013-06-20 |      -5.18% | TF_EQ/MR_EQ/equities           |
+Regimefiltret hjälpte på en relevant dag, 2021-11-26 där utan filter hamnade dd på -7.87% och med -6.20%. Det är en stor förbättring, men dagen bryter fortfarande -5%. Det tog 
+också bort en soft-breach-dag, 2018-12-04 fanns i baseline men inte i regime-caset. Så filtret är inte värdelöst. Men det är inte tillräckligt starkt som portfolio risk-control.
 
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
