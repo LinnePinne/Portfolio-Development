@@ -118,7 +118,7 @@ Fas 7 - Stress/Kill-test
 Fas 8 — Välj “Production Candidate” och sedan livebot-implementation
 
 Fas 1
-Här behäver vi inte utföra något faktiskt arbete, utan vi standardiserar denna modellen för som baseline inför kommande faser:
+Här behöver vi inte utföra något faktiskt arbete, utan vi standardiserar denna modellen för som baseline inför kommande faser:
 TF_EQ	Aktiv, med nya 70/160/20/12, behandlas som ett samlat US-equity trendcluster
 MR_EQ	Aktiv med nya 30/150/0.20-parametrar
 MR_FX	Aktiv, utan GBPCHF, med EURUSD-regime multiplier
@@ -198,3 +198,175 @@ REGIME_MARKET_MULTIPLIERS = {
 }
 Vi kommer ta bort denna risk overlayen eftersom vi inte har kvar TF FX och vi har en ny trend/vol risk multiplier för MR FX. Det vi kan göra för TF EQ är en ny undersökning för 
 regime nedskalning.
+
+Fas 2
+Vi har nu byggt den nya backtest motorn
+================ NEW BASELINE CONFIG ================
+Active strategies: ['MR_EQ', 'MR_FX', 'TF_EQ']
+Strategy targets: {'TF_EQ': 1.125, 'MR_EQ': 0.875, 'MR_FX': 8.0}
+TF_EQ params: {'exit_confirm_bars': 12, 'adx_threshold': 20, 'ema_fast_len': 70, 'ema_slow_len': 160}
+MR_EQ params: {'ema_fast_len': 30, 'ema_slow_len': 150, 'pullback_frac': 0.2}
+MR_FX markets: ['EURUSD', 'USDCHF', 'EURCHF', 'EURCAD']
+MR_FX raw weights: {'EURCHF': 0.229429, 'EURCAD': 0.205126, 'EURUSD': 0.190355, 'USDCHF': 0.178844}
+MR_FX normalized weights: {'EURCHF': 0.28544679093354436, 'EURCAD': 0.2552099274156023, 'EURUSD': 0.23683241389778464, 'USDCHF': 0.22251086775306875}
+Max gross exposure total: 12.5
+
+--- TRADE COUNTS BY STRATEGY ---
+Strategy
+MR_EQ     422
+MR_FX    8093
+TF_EQ     461
+dtype: int64
+
+--- TRADE COUNTS BY STRATEGY x MARKET ---
+Strategy  Market
+MR_EQ     US100      145
+          US30       136
+          US500      141
+MR_FX     EURCAD    1894
+          EURCHF    1779
+          EURUSD    2325
+          USDCHF    2095
+TF_EQ     US100      156
+          US30       156
+          US500      149
+dtype: int64
+
+--- EURUSD REGIME TABLE SUMMARY (closed day, multiplier applies next day) ---
+TrendRegime       VolRegime  BadRegime  MR_FX_Multiplier
+trend_flat_or_up  low_vol    False      1.00                1341
+                  mid_vol    False      1.00                1070
+trend_down        high_vol   False      1.00                 679
+trend_flat_or_up  high_vol   False      1.00                 522
+trend_down        mid_vol    True       0.75                 353
+                  low_vol    False      1.00                 316
+unknown           unknown    False      1.00                  80
+                  low_vol    False      1.00                  57
+                  high_vol   False      1.00                  47
+                  mid_vol    False      1.00                  35
+Name: count, dtype: int64
+Bad regime day rate: 0.07844444444444444
+
+================ CASE: BASELINE_NO_MR_FX_REGIME_MULTIPLIER ================
+
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  366544.893271      71.674793  2288.741623  29743.224943 -25685.712832         0.292726            0.411623           0.031316
+MR_FX  321147.163879      62.797646  1850.620442  20269.810538 -53344.056437         0.436645            0.360642           0.033933
+MR_EQ  202794.453183      39.654762  1127.055956  14353.192820 -12260.457853         0.099140            0.227734           0.035184
+
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ
+MR_EQ  1.000000  0.000545  0.090279
+MR_FX  0.000545  1.000000  0.010081
+TF_EQ  0.090279  0.010081  1.000000
+
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 940486.5103
+CAGR: 0.2332
+Max Drawdown %: -20.8267
+Sharpe (ann.): 1.3991
+Calmar: 1.1198
+Avg Daily Return: 0.0007
+Daily Vol: 0.0077
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 147.73583461168207
+Max gross exposure %: 969.1837713901025
+Max DD% (MTM equity): -20.83%
+Max DD% (Closed trades only): -17.89%
+
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0871
+AvgWorstDD: -0.0061
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+
+================ CASE: MR_FX_REGIME_MULTIPLIER_0.75 ================
+
+--- STRATEGY ATTRIBUTION ---
+           Total PnL  Avg Daily PnL    Daily Vol      Best Day     Worst Day  Positive Days %  PnL Contribution %  Sharpe-like Daily
+TF_EQ  372183.970207      72.777468  2351.001979  30770.805280 -26573.112686         0.292726            0.403242           0.030956
+MR_FX  344669.436797      67.397231  1854.117193  20936.050340 -55187.007348         0.436449            0.373432           0.036350
+MR_EQ  206125.391829      40.306099  1155.419318  14824.961825 -12688.159293         0.099140            0.223326           0.034884
+
+--- STRATEGY CORRELATION (DAILY PnL) ---
+          MR_EQ     MR_FX     TF_EQ
+MR_EQ  1.000000 -0.006269  0.090352
+MR_FX -0.006269  1.000000  0.010029
+TF_EQ  0.090352  0.010029  1.000000
+
+--- COMBINED PORTFOLIO METRICS (USD, 1H master) ---
+Equity Start: 50000.0000
+Equity End: 972978.7988
+CAGR: 0.2362
+Max Drawdown %: -18.2527
+Sharpe (ann.): 1.4295
+Calmar: 1.2941
+Avg Daily Return: 0.0007
+Daily Vol: 0.0077
+
+Sanity: Open positions at end: 2
+Avg gross exposure %: 146.02581016352235
+Max gross exposure %: 969.1837713901023
+Max DD% (MTM equity): -18.25%
+Max DD% (Closed trades only): -15.22%
+
+--- FTMO DAILY LOSS ANALYSIS (MTM, 1H) ---
+Days: 3931
+WorstDayDD: -0.0871
+AvgWorstDD: -0.0061
+P(Breach -5%): 0.0020
+P(Breach -10%): 0.0000
+Count Breach -5%: 8
+Count Breach -10%: 0
+
+================ BASELINE VS MR_FX REGIME MULTIPLIER ================
+                                     Equity Start     Equity End      CAGR  Sharpe (ann.)    Calmar  Max Drawdown %  WorstDayDD  P(Breach -5%)  Count Breach -5%  Avg Gross Exposure %  \
+Case                                                                                                                                                                                     
+BASELINE_NO_MR_FX_REGIME_MULTIPLIER       50000.0  940486.510332  0.233208       1.399138  1.119752      -20.826728   -0.087106       0.002035                 8            147.735835   
+MR_FX_REGIME_MULTIPLIER_0.75              50000.0  972978.798832  0.236203       1.429451  1.294074      -18.252707   -0.087106       0.002035                 8            146.025810   
+
+                                     Max Gross Exposure %  
+Case                                                       
+BASELINE_NO_MR_FX_REGIME_MULTIPLIER            969.183771  
+MR_FX_REGIME_MULTIPLIER_0.75                   969.183771  
+
+--- DELTA: regime case minus baseline ---
+Equity Start            0.000000e+00
+Equity End              3.249229e+04
+CAGR                    2.995774e-03
+Sharpe (ann.)           3.031261e-02
+Calmar                  1.743217e-01
+Max Drawdown %          2.574021e+00
+WorstDayDD             -6.938894e-17
+P(Breach -5%)           0.000000e+00
+Count Breach -5%        0.000000e+00
+Avg Gross Exposure %   -1.710024e+00
+Max Gross Exposure %   -2.273737e-13
+Name: Delta_RegimeMinusBaseline, dtype: float64
+
+--- WORST INTRADAY DD DAYS: regime case should be inspected in full run if delta is promising. ---
+Set RUN_PLOTS=True and RUN_FTMO_BOOTSTRAP=True for production-candidate evaluation.
+
+Regime multiplier är lovande, den förbättrar CAGR, Sharpe, Calmar och total max drawdown, men den förbättrar inte worst intraday day eller antal -5%-breaches.
+Baseline utan filter:
+CAGR: 23.32%
+Max DD: -20.83%
+Sharpe: 1.40
+WorstDayDD: -8.71%
+-5% breach-dagar: 8
+Med MR_FX-regime multiplier:
+CAGR: 23.62%
+Max DD: -18.25%
+Sharpe: 1.43
+WorstDayDD: -8.71%
+-5% breach-dagar: 8
+Så filtret är inte en return-kostnad. Det är faktiskt positivt här: equity end ökar med cirka 32.5k, max DD förbättras med 2.57 procentenheter, Sharpe förbättras och Calmar går från 1.12 till 1.29.
+
+
+målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
