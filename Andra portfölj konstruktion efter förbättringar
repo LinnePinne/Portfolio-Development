@@ -45,7 +45,7 @@ Vilken strategi driver daily-loss breach?
 Vilka strategier förlorar samtidigt?
 Ger MR_FX-regimefiltret lägre risk utan att förstöra edge?
 Blir TF_EQ för korrelerad internt när den behandlas som cluster?
-Vi kommer precis som tidigare behandla varje strategi som ett cluster där vikterna bestäms internt över marknaderna som ingår i respektive strategi.
+Vi kommer precis som i tidigare portfölj vikta TF_EQ och MR_FX efter ERC, men denna gången med rullande vikter. Och MR_EQ ska ha equal weights precis som innan.
 
 Fas 4 — Rullande ERC och viktmetoder
 Först efter clean baseline + attribution bör vi bygga nya vikter. Vi jämför olika typer av viktmetoder:
@@ -571,6 +571,28 @@ Alltså: MR_FX är med i varje hård breach-dag. De värsta dagarna med regime m
 | 2013-06-20 |      -5.18% | TF_EQ/MR_EQ/equities           |
 Regimefiltret hjälpte på en relevant dag, 2021-11-26 där utan filter hamnade dd på -7.87% och med -6.20%. Det är en stor förbättring, men dagen bryter fortfarande -5%. Det tog 
 också bort en soft-breach-dag, 2018-12-04 fanns i baseline men inte i regime-caset. Så filtret är inte värdelöst. Men det är inte tillräckligt starkt som portfolio risk-control.
-
+Men det ska det inte heller fungera som. Vi ska inte enbart optimera portföljen baserat på breach days, det hade vi behövt göra ifall vi inte ska ha cutoff skydd. Breach-dagar 
+är inte automatiskt ett problem om vi har en daily-DD-cutoff. Men de är de dagar där cutoff-modellen måste testas, prissättas och stressas. Om portföljen historiskt hade 8 dagar 
+under -5% på 3 931 dagar, då är det inte nödvändigtvis ett skäl att skrota MR_FX eller optimera bort den. Det är snarare ett tecken på att riskmotorn måste ingripa här.
+Om vi ändå ska ha rullande ERC i TF_EQ och MR_FX, equal weights i MR_EQ, och FTMO-regelverk som slutmål att optimera mot, då är det mer rationellt att börja optimera mot sannolikhet 
+att klara challenge och payout, time-to-payout, cutoff frequency, avkastning efter cutoff-logik och max-loss-fail probability. Inte mot “minimera antal breach days” som isolerat mål.
+Det är viktigt att notera att breach days fortfarande är relevant eftersom det visar var cutoffen kommer aktiveras. Om 8 dagar historiskt går under -5%, då måste vi simulera vad som 
+händer om vi stänger vid till exempel -3.5%, -4.0% eller -4.5%. Dessutom får vi inte anta perfekt exit vid exakt cutoff. Om H1-MTM visar -8.7%, då kan tick-baserad live-equity ha 
+varit värre eller bättre. Slutlgien påverkar de också payout simuleringen eftersom en cutoff-dag inte bara innebär att förluster stoppas, utan också att positioner stängs, resten
+av dagens trades blockeras, eventuella mean reversion-rebounds missas. Därav kommer även equity path och nästa dags sizing förändras. Så breach days är inte optimeringsmålet, men de
+är kritiska testfall för FTMO-simuleringen.
+Nästa steg är FTMO sims men vi måste först definiera de rullande ERC vikterna på portfölj nivå istället (inte funded nivå). När vi börjar med FTMO sims tar vi bort nedskalning baserad
+på equity drawdown som är kvar sen tidigare portfölj. Vi lägger in de rullande ERC viktern i motorn och lägger också in daily cutoff. Vi bör testa flera cutoff-nivåer, exempelvis -3%,
+-3.5%, -4%, -4.5%. Bäst är nog en soft cutoff där inga fler entries tillåts vid -3.5% eller -4% och en absolut kill switch vid -4.5% där allt stängs. När vi bestämt hur vi ska köra 
+ERC, antingen ex. rolling ERC 252 eller rolling ERC 756 på portfölj nivå, implementerat dessa vikter samt cutoffs i simulatorn ska vi börja optimera cluster budgets och total exposure. 
+Sedan kör vi simulatorn med:
+daily cutoff aktiv
+no drawdown scaling
+rolling ERC aktivt
+MR_EQ equal
+MR_FX regime on/off
+realistiska costs
+block bootstrap/day-path bootstrap
+Eller så jämför vi olika rolling ERCs i simuleringarna.
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
