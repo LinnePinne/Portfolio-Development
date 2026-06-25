@@ -964,4 +964,41 @@ Exported raw portfolio summary CSV: ftmo_erc_raw_portfolio_summary.csv
 --- IMPORTANT INTERPRETATION NOTE ---
 Daily cutoff sim uses H1-observed execution by default. If a day jumps through cutoff, exit is simulated at the first observed H1 MTM level, not at the ideal cutoff price.
 No drawdown/recovery exposure scaling is used anywhere in this FTMO grid.
+rolling_erc_504 vinner inte med enorm marginal men är oftast bäst i de flesta metrikerna. Tilläggsvis är -4.5% cutoff oftast bäst, speciellt med 0.50 exposure eftersom den
+nästan aldrig träffas. Eftersom worst day dd runt -8.4% till -8.7% skalas ner till hälften, alltså -4.2% till -4.35%. Då blir -4.5% cutoff bäst för att den skyddar mot 
+extremfall men stör inte strategierna. Det betyder inte automatiskt att -4.5% är bästa live-cutoff. Det betyder att med H1-data och 0.50 exposure ligger portföljen historiskt 
+precis under gränsen. Live skulle vi fortfarande vilja se -4.0% som kandidat, eftersom H1-data kan missa intratimmes-spikar. rolling_erc_504 är bäst balanserad. Den har:
+högst raw Sharpe
+lägst raw max DD
+färre breach-dagar än fixed och 252
+bättre FTMO payout-sannolikhet än 252/756/fixed
+lagom stabilitet, inte lika brusig som 252 och inte lika trög som 756
+Vi väljer inte 756 bara för att den är “stabilare”. 504 slår den här på både raw och FTMO-sim. Regimefilter ska vara på i nästa kandidat. Det förbättrar nästan alla 
+ERC-varianter:
+högre equity end
+högre CAGR
+högre Sharpe
+bättre Calmar
+lägre max DD
+högre payout probability
+lägre max-loss fail
+Det är exakt vad vi vill se. Det här är inte ett filter som bara sänker risk genom att döda return. Det förbättrar riskjusterad profil. Men nästa viktiga punkt är att bästa 
+kandidaten har väldigt hög payout sannolikhet men väldigt lång tid till payout, där median mhallenge är cirka 216–220 dagar och median verification är cirka 99–101 dagar.
+Det är alldeles för långsamt för oss, så nästa steg är att ta reda på vilken exposure som ger bäst tradeoff mellan payout sannolikhet och time-to-payout. Vi pausar här och
+tar en övertitt på vad vi gjort hittils och vad nästa rationella steg är. Nu har vi bestämt oss för equal weights inom MR_EQ och rolling_erc_504 inom TF_EQ och MR_FX och att 
+MR_FX regimefilter ska vara på. Innan vi optimerar total exposure bör vi kolla på strategi viktning. Så ordningen bör vara:
+A. Frys interna weights:
+   TF_EQ = rolling ERC 504
+   MR_EQ = equal
+   MR_FX = rolling ERC 504
+
+B. Testa cluster/strategy budgets:
+   hur mycket TF_EQ vs MR_EQ vs MR_FX?
+
+C. För de 2–4 bästa strategy-budget-kandidaterna:
+   testa total exposure + cutoff-grid i FTMO-sim
+
+Så nu ska vi egentligen ta fram hur vi budgeterar strategierna. Vi gör detta 
+
+
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
