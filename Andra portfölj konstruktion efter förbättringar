@@ -602,5 +602,366 @@ Bra kompromiss. Cirka två tradingår. Mindre brus än 252 men fortfarande relat
 Rolling ERC 756
 Mest stabil. Cirka tre tradingår. Sannolikt bäst för produktion om resultaten är nära, eftersom den minskar turnover och parameterbrus.
 Viktigast av allt är att ERC ska vara internt per cluster och inte över hela portföljen, det skulle blanda strategi-edge med marknadsvolatilitet
+================ FTMO ERC GRID CONFIG ================
+Active strategies: ['MR_EQ', 'MR_FX', 'TF_EQ']
+Strategy targets: {'TF_EQ': 1.125, 'MR_EQ': 0.875, 'MR_FX': 8.0}
+TF_EQ params: {'exit_confirm_bars': 12, 'adx_threshold': 20, 'ema_fast_len': 70, 'ema_slow_len': 160}
+MR_EQ params: {'ema_fast_len': 30, 'ema_slow_len': 150, 'pullback_frac': 0.2}
+MR_EQ market weights: fixed equal {'US500': 0.3333333333333333, 'US100': 0.3333333333333333, 'US30': 0.3333333333333333}
+MR_FX markets: ['EURUSD', 'USDCHF', 'EURCHF', 'EURCAD']
+MR_FX normalized static weights: {'EURCHF': 0.28544679093354436, 'EURCAD': 0.2552099274156023, 'EURUSD': 0.23683241389778464, 'USDCHF': 0.22251086775306875}
+ERC methods: {'fixed_current_weights': None, 'rolling_erc_252': 252, 'rolling_erc_504': 504, 'rolling_erc_756': 756}
+Cutoff grid: [-0.03, -0.035, -0.04, -0.045]
+Exposure grid: [0.5, 0.75, 1.0, 1.25]
+No drawdown/recovery scaling: TRUE
+FTMO daily loss amount mode: fixed_initial_balance
+FTMO cutoff execution mode: observed_h1
 
+--- TRADE COUNTS BY STRATEGY ---
+Strategy
+MR_EQ     422
+MR_FX    8093
+TF_EQ     461
+dtype: int64
+
+--- TRADE COUNTS BY STRATEGY x MARKET ---
+Strategy  Market
+MR_EQ     US100      145
+          US30       136
+          US500      141
+MR_FX     EURCAD    1894
+          EURCHF    1779
+          EURUSD    2325
+          USDCHF    2095
+TF_EQ     US100      156
+          US30       156
+          US500      149
+dtype: int64
+
+--- EURUSD REGIME TABLE SUMMARY ---
+TrendRegime       VolRegime  BadRegime  MR_FX_Multiplier
+trend_flat_or_up  low_vol    False      1.00                1341
+                  mid_vol    False      1.00                1070
+trend_down        high_vol   False      1.00                 679
+trend_flat_or_up  high_vol   False      1.00                 522
+trend_down        mid_vol    True       0.75                 353
+                  low_vol    False      1.00                 316
+unknown           unknown    False      1.00                  80
+                  low_vol    False      1.00                  57
+                  high_vol   False      1.00                  47
+                  mid_vol    False      1.00                  35
+Name: count, dtype: int64
+Bad regime day rate: 0.07844444444444444
+
+================ RAW PORTFOLIO: ERC=fixed_current_weights | MR_FX_REGIME=off ================
+Equity End: 940486.51
+CAGR: 0.2332
+Sharpe: 1.3991
+Max DD %: -20.8267
+WorstDayDD: -0.0871
+Count Breach -5%: 8
+Avg gross exposure %: 147.74
+Max gross exposure %: 969.18
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=off cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=fixed_current_weights | MR_FX_REGIME=on ================
+Equity End: 972978.8
+CAGR: 0.2362
+Sharpe: 1.4295
+Max DD %: -18.2527
+WorstDayDD: -0.0871
+Count Breach -5%: 8
+Avg gross exposure %: 146.03
+Max gross exposure %: 969.18
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=fixed_current_weights regime=on cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_252 | MR_FX_REGIME=off ================
+Equity End: 896325.57
+CAGR: 0.229
+Sharpe: 1.4043
+Max DD %: -20.5274
+WorstDayDD: -0.0853
+Count Breach -5%: 7
+Avg gross exposure %: 146.94
+Max gross exposure %: 967.73
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=off cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_252 | MR_FX_REGIME=on ================
+Equity End: 923222.04
+CAGR: 0.2316
+Sharpe: 1.4313
+Max DD %: -18.1507
+WorstDayDD: -0.0853
+Count Breach -5%: 7
+Avg gross exposure %: 145.27
+Max gross exposure %: 967.73
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_252 regime=on cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_504 | MR_FX_REGIME=off ================
+Equity End: 914599.45
+CAGR: 0.2308
+Sharpe: 1.4037
+Max DD %: -20.4228
+WorstDayDD: -0.0841
+Count Breach -5%: 6
+Avg gross exposure %: 147.5
+Max gross exposure %: 968.3
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=off cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_504 | MR_FX_REGIME=on ================
+Equity End: 946239.24
+CAGR: 0.2337
+Sharpe: 1.4336
+Max DD %: -18.0215
+WorstDayDD: -0.0841
+Count Breach -5%: 6
+Avg gross exposure %: 145.8
+Max gross exposure %: 968.3
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_504 regime=on cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_756 | MR_FX_REGIME=off ================
+Equity End: 910958.54
+CAGR: 0.2304
+Sharpe: 1.3948
+Max DD %: -20.8326
+WorstDayDD: -0.0837
+Count Breach -5%: 6
+Avg gross exposure %: 147.6
+Max gross exposure %: 968.67
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=off cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO: ERC=rolling_erc_756 | MR_FX_REGIME=on ================
+Equity End: 943452.54
+CAGR: 0.2335
+Sharpe: 1.4253
+Max DD %: -18.518
+WorstDayDD: -0.0837
+Count Breach -5%: 6
+Avg gross exposure %: 145.88
+Max gross exposure %: 968.67
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-3.5% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.0% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.0% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.0% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.0% exposure=1.25
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.5% exposure=0.50
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.5% exposure=0.75
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.5% exposure=1.00
+FTMO grid running: ERC=rolling_erc_756 regime=on cutoff=-4.5% exposure=1.25
+
+================ RAW PORTFOLIO SUMMARY BY ERC / REGIME ================
+              ERC Method  ERC Lookback MR_FX Regime  Raw Equity End  Raw CAGR  Raw Sharpe  Raw Calmar  Raw Max DD %  Raw WorstDayDD  Raw Count Breach -5%  Raw Avg Gross Exposure %  \
+0  fixed_current_weights           NaN          off   940486.510332  0.233208    1.399138    1.119752    -20.826728       -0.087106                     8                147.735835   
+1  fixed_current_weights           NaN           on   972978.798832  0.236203    1.429451    1.294074    -18.252707       -0.087106                     8                146.025810   
+2        rolling_erc_252         252.0          off   896325.574971  0.228978    1.404325    1.115476    -20.527402       -0.085280                     7                146.943504   
+3        rolling_erc_252         252.0           on   923222.043024  0.231577    1.431296    1.275856    -18.150690       -0.085280                     7                145.273221   
+4        rolling_erc_504         504.0          off   914599.445753  0.230751    1.403683    1.129870    -20.422821       -0.084076                     6                147.501292   
+5        rolling_erc_504         504.0           on   946239.236308  0.233745    1.433601    1.297037    -18.021468       -0.084076                     6                145.798900   
+6        rolling_erc_756         756.0          off   910958.536754  0.230401    1.394836    1.105964    -20.832564       -0.083679                     6                147.600887   
+7        rolling_erc_756         756.0           on   943452.539230  0.233485    1.425289    1.260852    -18.518047       -0.083679                     6                145.883393   
+
+   Raw Max Gross Exposure %  
+0                969.183771  
+1                969.183771  
+2                967.729737  
+3                967.729737  
+4                968.296680  
+5                968.296680  
+6                968.672902  
+7                968.672902  
+
+================ FTMO ERC x CUTOFF x EXPOSURE GRID - TOP RESULTS ================
+               ERC Method MR_FX Regime  Daily Cutoff  Exposure Factor  P(Reach Payout Overall)  P(Pass Challenge)  P(Pass Verification | Challenge)  P(Reach Payout | Verification)  \
+0         rolling_erc_504           on        -0.045              0.5                   0.9794             0.9918                          0.990119                        0.997352   
+1   fixed_current_weights           on        -0.045              0.5                   0.9786             0.9920                          0.988710                        0.997757   
+2         rolling_erc_252           on        -0.045              0.5                   0.9774             0.9922                          0.988309                        0.996737   
+3         rolling_erc_504           on        -0.035              0.5                   0.9782             0.9916                          0.989109                        0.997349   
+4         rolling_erc_756           on        -0.045              0.5                   0.9770             0.9912                          0.989104                        0.996532   
+5   fixed_current_weights           on        -0.035              0.5                   0.9780             0.9918                          0.988707                        0.997349   
+6         rolling_erc_504           on        -0.030              0.5                   0.9778             0.9918                          0.989312                        0.996535   
+7         rolling_erc_252           on        -0.035              0.5                   0.9762             0.9918                          0.987699                        0.996529   
+8   fixed_current_weights           on        -0.030              0.5                   0.9782             0.9918                          0.988506                        0.997756   
+9         rolling_erc_504           on        -0.040              0.5                   0.9754             0.9906                          0.987886                        0.996730   
+10        rolling_erc_252           on        -0.030              0.5                   0.9764             0.9922                          0.987503                        0.996530   
+11  fixed_current_weights           on        -0.040              0.5                   0.9756             0.9910                          0.987084                        0.997342   
+12        rolling_erc_756           on        -0.035              0.5                   0.9746             0.9906                          0.987684                        0.996116   
+13        rolling_erc_504          off        -0.045              0.5                   0.9730             0.9894                          0.987265                        0.996110   
+14  fixed_current_weights          off        -0.045              0.5                   0.9736             0.9898                          0.988078                        0.995501   
+15        rolling_erc_252          off        -0.045              0.5                   0.9728             0.9900                          0.986869                        0.995701   
+16        rolling_erc_252           on        -0.040              0.5                   0.9726             0.9904                          0.986470                        0.995496   
+17        rolling_erc_756           on        -0.040              0.5                   0.9726             0.9906                          0.986271                        0.995496   
+18  fixed_current_weights          off        -0.030              0.5                   0.9746             0.9906                          0.987684                        0.996116   
+19        rolling_erc_756          off        -0.045              0.5                   0.9712             0.9888                          0.985437                        0.996716   
+20        rolling_erc_252          off        -0.035              0.5                   0.9716             0.9892                          0.986049                        0.996104   
+21        rolling_erc_252          off        -0.030              0.5                   0.9724             0.9896                          0.986257                        0.996311   
+22        rolling_erc_756           on        -0.030              0.5                   0.9716             0.9902                          0.985256                        0.995900   
+23  fixed_current_weights          off        -0.035              0.5                   0.9714             0.9892                          0.986858                        0.995083   
+24        rolling_erc_504          off        -0.035              0.5                   0.9700             0.9882                          0.986035                        0.995484   
+
+    Fail MaxDailyLoss %  Fail MaxLoss %  Avg Cutoff Hits / Sim  Median Days Challenge  Median Days Verification  Median Days Payout  Rank Score  
+0                   0.0          0.0138                 0.0000                  218.0                     101.0                15.0    1.438064  
+1                   0.0          0.0152                 0.0000                  216.0                      99.0                15.0    1.436342  
+2                   0.0          0.0146                 0.0000                  220.0                     101.0                15.0    1.435422  
+3                   0.0          0.0144                 0.1132                  218.0                     101.0                15.0    1.435170  
+4                   0.0          0.0168                 0.0000                  218.0                     100.0                15.0    1.433781  
+5                   0.0          0.0156                 0.2128                  216.0                     100.0                15.0    1.433353  
+6                   0.0          0.0146                 0.3252                  218.0                     101.0                15.0    1.432650  
+7                   0.0          0.0154                 0.1138                  220.0                     101.0                15.0    1.432442  
+8                   0.0          0.0158                 0.4332                  216.0                     100.0                15.0    1.431209  
+9                   0.0          0.0164                 0.1132                  218.0                     100.0                15.0    1.430825  
+10                  0.0          0.0154                 0.3264                  220.0                     101.0                15.0    1.430597  
+11                  0.0          0.0178                 0.1112                  216.0                      99.0                15.0    1.430305  
+12                  0.0          0.0178                 0.1146                  218.0                     100.0                15.0    1.429271  
+13                  0.0          0.0180                 0.0000                  218.0                     100.0                15.0    1.428273  
+14                  0.0          0.0202                 0.0000                  215.0                     100.0                15.0    1.428056  
+15                  0.0          0.0192                 0.0000                  219.0                     101.0                15.0    1.427574  
+16                  0.0          0.0184                 0.1150                  220.0                     101.0                15.0    1.426664  
+17                  0.0          0.0192                 0.1150                  218.0                     100.0                15.0    1.426284  
+18                  0.0          0.0196                 0.4350                  216.0                     100.0                15.0    1.425167  
+19                  0.0          0.0206                 0.0000                  218.0                      99.0                15.0    1.424627  
+20                  0.0          0.0204                 0.2296                  220.0                     101.0                15.0    1.423074  
+21                  0.0          0.0198                 0.4442                  220.0                     101.0                15.0    1.422189  
+22                  0.0          0.0188                 0.4370                  222.0                     101.0                15.0    1.421941  
+23                  0.0          0.0220                 0.3256                  216.0                      99.0                15.0    1.421276  
+24                  0.0          0.0206                 0.2290                  218.0                     100.0                15.0    1.421077  
+
+================ BEST RESULT PER ERC METHOD / REGIME ================
+               ERC Method MR_FX Regime  Daily Cutoff  Exposure Factor  P(Reach Payout Overall)  P(Pass Challenge)  P(Pass Verification | Challenge)  P(Reach Payout | Verification)  \
+0         rolling_erc_504           on        -0.045              0.5                   0.9794             0.9918                          0.990119                        0.997352   
+1   fixed_current_weights           on        -0.045              0.5                   0.9786             0.9920                          0.988710                        0.997757   
+2         rolling_erc_252           on        -0.045              0.5                   0.9774             0.9922                          0.988309                        0.996737   
+4         rolling_erc_756           on        -0.045              0.5                   0.9770             0.9912                          0.989104                        0.996532   
+13        rolling_erc_504          off        -0.045              0.5                   0.9730             0.9894                          0.987265                        0.996110   
+14  fixed_current_weights          off        -0.045              0.5                   0.9736             0.9898                          0.988078                        0.995501   
+15        rolling_erc_252          off        -0.045              0.5                   0.9728             0.9900                          0.986869                        0.995701   
+19        rolling_erc_756          off        -0.045              0.5                   0.9712             0.9888                          0.985437                        0.996716   
+
+    Fail MaxDailyLoss %  Fail MaxLoss %  Avg Cutoff Hits / Sim  Median Days Challenge  Median Days Verification  Median Days Payout  Rank Score  
+0                   0.0          0.0138                    0.0                  218.0                     101.0                15.0    1.438064  
+1                   0.0          0.0152                    0.0                  216.0                      99.0                15.0    1.436342  
+2                   0.0          0.0146                    0.0                  220.0                     101.0                15.0    1.435422  
+4                   0.0          0.0168                    0.0                  218.0                     100.0                15.0    1.433781  
+13                  0.0          0.0180                    0.0                  218.0                     100.0                15.0    1.428273  
+14                  0.0          0.0202                    0.0                  215.0                     100.0                15.0    1.428056  
+15                  0.0          0.0192                    0.0                  219.0                     101.0                15.0    1.427574  
+19                  0.0          0.0206                    0.0                  218.0                      99.0                15.0    1.424627  
+
+Exported FTMO grid CSV: ftmo_erc_cutoff_grid_results.csv
+Exported raw portfolio summary CSV: ftmo_erc_raw_portfolio_summary.csv
+
+--- IMPORTANT INTERPRETATION NOTE ---
+Daily cutoff sim uses H1-observed execution by default. If a day jumps through cutoff, exit is simulated at the first observed H1 MTM level, not at the ideal cutoff price.
+No drawdown/recovery exposure scaling is used anywhere in this FTMO grid.
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
