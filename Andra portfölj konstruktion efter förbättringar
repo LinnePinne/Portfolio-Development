@@ -998,7 +998,569 @@ B. Testa cluster/strategy budgets:
 C. För de 2–4 bästa strategy-budget-kandidaterna:
    testa total exposure + cutoff-grid i FTMO-sim
 
-Så nu ska vi egentligen ta fram hur vi budgeterar strategierna. Vi gör detta 
+Så nu ska vi egentligen ta fram hur vi budgeterar strategierna.
+================ STRATEGY BUDGET ATTRIBUTION CONFIG ================
+Active strategies: ['MR_EQ', 'MR_FX', 'TF_EQ']
+Internal weights: TF_EQ=rolling ERC 504 | MR_EQ=fixed equal | MR_FX=rolling ERC 504
+MR_FX regime filter on: True
+Strategy budget total used for all cases: 10.0
+Budget cases:
+  equal_clusters raw= {'TF_EQ': 1.0, 'MR_EQ': 1.0, 'MR_FX': 1.0} normalized= {'TF_EQ': 3.333333333333333, 'MR_EQ': 3.333333333333333, 'MR_FX': 3.333333333333333}
+  tf_eq_core raw= {'TF_EQ': 1.5, 'MR_EQ': 1.0, 'MR_FX': 1.0} normalized= {'TF_EQ': 4.285714285714286, 'MR_EQ': 2.8571428571428568, 'MR_FX': 2.8571428571428568}
+  mr_eq_core raw= {'TF_EQ': 1.0, 'MR_EQ': 1.5, 'MR_FX': 1.0} normalized= {'TF_EQ': 2.8571428571428568, 'MR_EQ': 4.285714285714286, 'MR_FX': 2.8571428571428568}
+  mr_fx_core raw= {'TF_EQ': 1.0, 'MR_EQ': 1.0, 'MR_FX': 1.5} normalized= {'TF_EQ': 2.8571428571428568, 'MR_EQ': 2.8571428571428568, 'MR_FX': 4.285714285714286}
+  balanced_tf_mrfx raw= {'TF_EQ': 1.25, 'MR_EQ': 1.0, 'MR_FX': 1.25} normalized= {'TF_EQ': 3.5714285714285716, 'MR_EQ': 2.8571428571428568, 'MR_FX': 3.5714285714285716}
+  equity_core_balanced raw= {'TF_EQ': 1.25, 'MR_EQ': 1.25, 'MR_FX': 1.0} normalized= {'TF_EQ': 3.5714285714285716, 'MR_EQ': 3.5714285714285716, 'MR_FX': 2.8571428571428568}
+  mean_reversion_core raw= {'TF_EQ': 0.75, 'MR_EQ': 1.25, 'MR_FX': 1.25} normalized= {'TF_EQ': 2.307692307692308, 'MR_EQ': 3.8461538461538463, 'MR_FX': 3.8461538461538463}
+  old_no_tf_fx_ratio raw= {'TF_EQ': 1.125, 'MR_EQ': 0.875, 'MR_FX': 8.0} normalized= {'TF_EQ': 1.125, 'MR_EQ': 0.875, 'MR_FX': 8.0}
+Screen exposure factor: 0.75
+Screen daily cutoff: -0.04
+FTMO daily loss amount mode: fixed_initial_balance
+FTMO cutoff execution mode: observed_h1
+No drawdown/recovery scaling: TRUE
+
+--- TRADE COUNTS BY STRATEGY ---
+Strategy
+MR_EQ     422
+MR_FX    8093
+TF_EQ     461
+dtype: int64
+
+--- TRADE COUNTS BY STRATEGY x MARKET ---
+Strategy  Market
+MR_EQ     US100      145
+          US30       136
+          US500      141
+MR_FX     EURCAD    1894
+          EURCHF    1779
+          EURUSD    2325
+          USDCHF    2095
+TF_EQ     US100      156
+          US30       156
+          US500      149
+dtype: int64
+
+--- EURUSD REGIME TABLE SUMMARY ---
+TrendRegime       VolRegime  BadRegime  MR_FX_Multiplier
+trend_flat_or_up  low_vol    False      1.00                1341
+                  mid_vol    False      1.00                1070
+trend_down        high_vol   False      1.00                 679
+trend_flat_or_up  high_vol   False      1.00                 522
+trend_down        mid_vol    True       0.75                 353
+                  low_vol    False      1.00                 316
+unknown           unknown    False      1.00                  80
+                  low_vol    False      1.00                  57
+                  high_vol   False      1.00                  47
+                  mid_vol    False      1.00                  35
+Name: count, dtype: int64
+Bad regime day rate: 0.07844444444444444
+
+================ BUDGET CASE: equal_clusters | full ================
+Strategy targets: {'TF_EQ': 3.333333333333333, 'MR_EQ': 3.333333333333333, 'MR_FX': 3.333333333333333}
+Equity End: 9874798.77
+CAGR: 0.4588
+Sharpe: 1.112
+Max DD %: -37.1756
+WorstDayDD: -0.1625
+Count Breach -5%: 169
+Avg gross exposure %: 250.02
+Max gross exposure %: 963.44
+Payout overall: 0.4436
+Mean total days to payout: 95.8
+Median total days to payout: 85.0
+Fail MaxLoss %: 0.2788
+Fail MaxDailyLoss %: 0.2776
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ              33.333333  5.069222e+06           51.596187  45339.255333                       67.169176       -640478.402291                  35.319097            173.490335   
+0    MR_EQ              33.333333  4.098603e+06           41.716920  30090.076204                       31.920921       -543130.916576                  29.950882             46.185281   
+1    MR_FX              33.333333  6.569739e+05            6.686894   5328.914460                        0.909903        -52523.448482                   2.896399             30.340024   
+
+   Max Gross Exposure %  
+2            394.603261  
+0            427.077305  
+1            349.239197  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+TF_EQ    51
+MR_EQ    41
+Name: count, dtype: int64
+Budget case running: equal_clusters | without_MR_EQ_drop_no_renorm
+Budget case running: equal_clusters | without_MR_EQ_drop_renorm_to_total
+Budget case running: equal_clusters | without_MR_FX_drop_no_renorm
+Budget case running: equal_clusters | without_MR_FX_drop_renorm_to_total
+Budget case running: equal_clusters | without_TF_EQ_drop_no_renorm
+Budget case running: equal_clusters | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: tf_eq_core | full ================
+Strategy targets: {'TF_EQ': 4.285714285714286, 'MR_EQ': 2.8571428571428568, 'MR_FX': 2.8571428571428568}
+Equity End: 12340800.1
+CAGR: 0.4822
+Sharpe: 1.0568
+Max DD %: -47.8069
+WorstDayDD: -0.1949
+Count Breach -5%: 228
+Avg gross exposure %: 285.19
+Max gross exposure %: 993.17
+Payout overall: 0.3344
+Mean total days to payout: 81.0
+Median total days to payout: 73.0
+Fail MaxLoss %: 0.2862
+Fail MaxDailyLoss %: 0.3794
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ              42.857143  7.302697e+06           59.415959  70230.169631                       80.771176        -3.534233e+06                 113.520100            219.654199   
+0    MR_EQ              28.571429  4.328548e+06           35.217785  31077.804366                       18.705729         2.340020e+05                  -7.516181             39.532932   
+1    MR_FX              28.571429  6.595557e+05            5.366256   5520.319789                        0.523095         4.484568e+05                 -14.404503             26.001998   
+
+   Max Gross Exposure %  
+2            517.706245  
+0            346.319450  
+1            303.487019  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+TF_EQ    106
+MR_EQ     30
+Name: count, dtype: int64
+Budget case running: tf_eq_core | without_MR_EQ_drop_no_renorm
+Budget case running: tf_eq_core | without_MR_EQ_drop_renorm_to_total
+Budget case running: tf_eq_core | without_MR_FX_drop_no_renorm
+Budget case running: tf_eq_core | without_MR_FX_drop_renorm_to_total
+Budget case running: tf_eq_core | without_TF_EQ_drop_no_renorm
+Budget case running: tf_eq_core | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: mr_eq_core | full ================
+Strategy targets: {'TF_EQ': 2.8571428571428568, 'MR_EQ': 4.285714285714286, 'MR_FX': 2.8571428571428568}
+Equity End: 11287508.52
+CAGR: 0.4728
+Sharpe: 1.1058
+Max DD %: -42.9587
+WorstDayDD: -0.1967
+Count Breach -5%: 178
+Avg gross exposure %: 235.64
+Max gross exposure %: 971.87
+Payout overall: 0.4372
+Mean total days to payout: 100.2
+Median total days to payout: 88.0
+Fail MaxLoss %: 0.291
+Fail MaxDailyLoss %: 0.2718
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+0    MR_EQ              42.857143  5.643581e+06           50.220926  44062.627438                       49.816342        -1.016376e+06                  44.488049             59.773146   
+2    TF_EQ              28.571429  4.971237e+06           44.237893  43837.555230                       49.555576        -5.818399e+05                  25.467854            149.860285   
+1    MR_FX              28.571429  6.226907e+05            5.541181   5175.341774                        0.628081         4.142883e+04                  -1.813391             26.003077   
+
+   Max Gross Exposure %  
+0            622.340775  
+2            342.154385  
+1            297.341812  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+MR_EQ    67
+TF_EQ    34
+Name: count, dtype: int64
+Budget case running: mr_eq_core | without_MR_EQ_drop_no_renorm
+Budget case running: mr_eq_core | without_MR_EQ_drop_renorm_to_total
+Budget case running: mr_eq_core | without_MR_FX_drop_no_renorm
+Budget case running: mr_eq_core | without_MR_FX_drop_renorm_to_total
+Budget case running: mr_eq_core | without_TF_EQ_drop_no_renorm
+Budget case running: mr_eq_core | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: mr_fx_core | full ================
+Strategy targets: {'TF_EQ': 2.8571428571428568, 'MR_EQ': 2.8571428571428568, 'MR_FX': 4.285714285714286}
+Equity End: 6426871.01
+CAGR: 0.4147
+Sharpe: 1.1523
+Max DD %: -32.712
+WorstDayDD: -0.1458
+Count Breach -5%: 119
+Avg gross exposure %: 228.38
+Max gross exposure %: 940.7
+Payout overall: 0.544
+Mean total days to payout: 117.9
+Median total days to payout: 104.0
+Fail MaxLoss %: 0.289
+Fail MaxDailyLoss %: 0.167
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ              28.571429  3.216027e+06           50.432676  27062.867439                       66.836138       -349157.151202                  33.066594            149.957137   
+0    MR_EQ              28.571429  2.537861e+06           39.797912  17816.784315                       31.200558       -311724.560183                  29.521576             39.400849   
+1    MR_FX              42.857143  6.229828e+05            9.769413   4724.295899                        1.963305        -63895.154692                   6.051129             39.018324   
+
+   Max Gross Exposure %  
+2            327.936377  
+0            345.152240  
+1            445.893830  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+TF_EQ    35
+MR_EQ    31
+MR_FX     1
+Name: count, dtype: int64
+Budget case running: mr_fx_core | without_MR_EQ_drop_no_renorm
+Budget case running: mr_fx_core | without_MR_EQ_drop_renorm_to_total
+Budget case running: mr_fx_core | without_MR_FX_drop_no_renorm
+Budget case running: mr_fx_core | without_MR_FX_drop_renorm_to_total
+Budget case running: mr_fx_core | without_TF_EQ_drop_no_renorm
+Budget case running: mr_fx_core | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: balanced_tf_mrfx | full ================
+Strategy targets: {'TF_EQ': 3.5714285714285716, 'MR_EQ': 2.8571428571428568, 'MR_FX': 3.5714285714285716}
+Equity End: 9108438.09
+CAGR: 0.4504
+Sharpe: 1.1014
+Max DD %: -37.7849
+WorstDayDD: -0.1716
+Count Breach -5%: 167
+Avg gross exposure %: 257.16
+Max gross exposure %: 962.06
+Payout overall: 0.4156
+Mean total days to payout: 94.6
+Median total days to payout: 84.0
+Fail MaxLoss %: 0.2588
+Fail MaxDailyLoss %: 0.3256
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ              35.714286  5.030802e+06           55.537188  45270.574841                       75.182312        -2.193372e+06                 124.767843            185.183884   
+0    MR_EQ              28.571429  3.364037e+06           37.137055  23935.614992                       23.780343         2.013387e+05                 -11.452956             39.466033   
+1    MR_FX              35.714286  6.635991e+05            7.325756   5305.625370                        1.037345         4.158676e+05                 -23.656225             32.508836   
+
+   Max Gross Exposure %  
+2            420.395278  
+0            345.734686  
+1            375.450306  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+TF_EQ    62
+MR_EQ    29
+Name: count, dtype: int64
+Budget case running: balanced_tf_mrfx | without_MR_EQ_drop_no_renorm
+Budget case running: balanced_tf_mrfx | without_MR_EQ_drop_renorm_to_total
+Budget case running: balanced_tf_mrfx | without_MR_FX_drop_no_renorm
+Budget case running: balanced_tf_mrfx | without_MR_FX_drop_renorm_to_total
+Budget case running: balanced_tf_mrfx | without_TF_EQ_drop_no_renorm
+Budget case running: balanced_tf_mrfx | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: equity_core_balanced | full ================
+Strategy targets: {'TF_EQ': 3.5714285714285716, 'MR_EQ': 3.5714285714285716, 'MR_FX': 2.8571428571428568}
+Equity End: 12116021.57
+CAGR: 0.4802
+Sharpe: 1.0956
+Max DD %: -39.6298
+WorstDayDD: -0.1732
+Count Breach -5%: 196
+Avg gross exposure %: 260.73
+Max gross exposure %: 981.04
+Payout overall: 0.3676
+Mean total days to payout: 86.8
+Median total days to payout: 79.0
+Fail MaxLoss %: 0.2518
+Fail MaxDailyLoss %: 0.3806
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ              35.714286  6.276711e+06           52.019724  57784.084478                       67.195711       -813546.768165                  34.335663            185.123779   
+0    MR_EQ              35.714286  5.136498e+06           42.569937  38501.531592                       32.209142       -913337.553110                  38.547323             49.604893   
+1    MR_FX              28.571429  6.528127e+05            5.410339   5456.634677                        0.595147         44678.696917                  -1.885660             26.002513   
+
+   Max Gross Exposure %  
+2            429.511023  
+0            471.889580  
+1            300.393324  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+TF_EQ    61
+MR_EQ    48
+Name: count, dtype: int64
+Budget case running: equity_core_balanced | without_MR_EQ_drop_no_renorm
+Budget case running: equity_core_balanced | without_MR_EQ_drop_renorm_to_total
+Budget case running: equity_core_balanced | without_MR_FX_drop_no_renorm
+Budget case running: equity_core_balanced | without_MR_FX_drop_renorm_to_total
+Budget case running: equity_core_balanced | without_TF_EQ_drop_no_renorm
+Budget case running: equity_core_balanced | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: mean_reversion_core | full ================
+Strategy targets: {'TF_EQ': 2.307692307692308, 'MR_EQ': 3.8461538461538463, 'MR_FX': 3.8461538461538463}
+Equity End: 7082636.08
+CAGR: 0.4245
+Sharpe: 1.1418
+Max DD %: -37.8566
+WorstDayDD: -0.1709
+Count Breach -5%: 121
+Avg gross exposure %: 210.64
+Max gross exposure %: 944.13
+Payout overall: 0.543
+Mean total days to payout: 121.7
+Median total days to payout: 107.0
+Fail MaxLoss %: 0.2898
+Fail MaxDailyLoss %: 0.1672
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %     Total PnL  PnL Contribution %     Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+0    MR_EQ              38.461538  3.544986e+06           50.407644  26481.906864                       53.647815       -464724.367617                  36.478203             53.379838   
+2    TF_EQ              23.076923  2.887282e+06           41.055470  23902.012716                       44.838889       -310834.167498                  24.398703            122.245864   
+1    MR_FX              38.461538  6.003682e+05            8.536887   4658.913123                        1.513295        -40320.576323                   3.164934             35.013309   
+
+   Max Gross Exposure %  
+0            525.016894  
+2            267.478704  
+1            397.062342  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+MR_EQ    57
+TF_EQ    19
+Name: count, dtype: int64
+Budget case running: mean_reversion_core | without_MR_EQ_drop_no_renorm
+Budget case running: mean_reversion_core | without_MR_EQ_drop_renorm_to_total
+Budget case running: mean_reversion_core | without_MR_FX_drop_no_renorm
+Budget case running: mean_reversion_core | without_MR_FX_drop_renorm_to_total
+Budget case running: mean_reversion_core | without_TF_EQ_drop_no_renorm
+Budget case running: mean_reversion_core | without_TF_EQ_drop_renorm_to_total
+
+================ BUDGET CASE: old_no_tf_fx_ratio | full ================
+Strategy targets: {'TF_EQ': 1.125, 'MR_EQ': 0.875, 'MR_FX': 8.0}
+Equity End: 946239.24
+CAGR: 0.2337
+Sharpe: 1.4336
+Max DD %: -18.0215
+WorstDayDD: -0.0841
+Count Breach -5%: 6
+Avg gross exposure %: 145.8
+Max gross exposure %: 968.3
+Payout overall: 0.9278
+Mean total days to payout: 281.8
+Median total days to payout: 249.0
+Fail MaxLoss %: 0.072
+Fail MaxDailyLoss %: 0.0
+
+--- STRATEGY ATTRIBUTION ---
+  Strategy  Target Budget Share %      Total PnL  PnL Contribution %    Daily Vol  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+2    TF_EQ                  11.25  358007.444532           39.945522  2253.091814                       54.034004        -22236.216132                  22.050006             61.033001   
+1    MR_FX                  80.00  339308.835864           37.859181  1751.834605                       31.195573        -65402.269202                  64.854578             72.906028   
+0    MR_EQ                   8.75  198922.955912           22.195297  1116.717852                       14.770423         -6386.912102                   6.333427             11.859872   
+
+   Max Gross Exposure %  
+2            120.539138  
+1            830.411856  
+0             89.775720  
+
+--- CUTOFF ATTRIBUTION SUMMARY ---
+Dominant Losing Strategy
+MR_FX    4
+TF_EQ    1
+Name: count, dtype: int64
+Budget case running: old_no_tf_fx_ratio | without_MR_EQ_drop_no_renorm
+Budget case running: old_no_tf_fx_ratio | without_MR_EQ_drop_renorm_to_total
+Budget case running: old_no_tf_fx_ratio | without_MR_FX_drop_no_renorm
+Budget case running: old_no_tf_fx_ratio | without_MR_FX_drop_renorm_to_total
+Budget case running: old_no_tf_fx_ratio | without_TF_EQ_drop_no_renorm
+Budget case running: old_no_tf_fx_ratio | without_TF_EQ_drop_renorm_to_total
+
+================ STRATEGY BUDGET PORTFOLIO SUMMARY - SPEED RANK ================
+            Budget Case  Target TF_EQ  Target MR_EQ  Target MR_FX  P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  \
+0    old_no_tf_fx_ratio      1.125000      0.875000      8.000000                   0.9278                 281.799095                        249.0          0.0720               0.0000   
+1            mr_fx_core      2.857143      2.857143      4.285714                   0.5440                 117.919485                        104.0          0.2890               0.1670   
+2   mean_reversion_core      2.307692      3.846154      3.846154                   0.5430                 121.657459                        107.0          0.2898               0.1672   
+3        equal_clusters      3.333333      3.333333      3.333333                   0.4436                  95.792606                         85.0          0.2788               0.2776   
+4            mr_eq_core      2.857143      4.285714      2.857143                   0.4372                 100.198536                         88.0          0.2910               0.2718   
+5      balanced_tf_mrfx      3.571429      2.857143      3.571429                   0.4156                  94.591434                         84.0          0.2588               0.3256   
+6  equity_core_balanced      3.571429      3.571429      2.857143                   0.3676                  86.751360                         79.0          0.2518               0.3806   
+7            tf_eq_core      4.285714      2.857143      2.857143                   0.3344                  81.009569                         73.0          0.2862               0.3794   
+
+   Avg Cutoff Hits / Sim  Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Budget Speed Rank Score  
+0                 0.3516  0.233745    1.433601    -18.021468                145.798900                 1.075586  
+1                 1.4678  0.414685    1.152347    -32.712013                228.376310                 0.155523  
+2                 1.6526  0.424538    1.141764    -37.856610                210.639011                 0.141130  
+3                 1.5994  0.458762    1.111974    -37.175593                250.015640                -0.202276  
+4                 1.6064  0.472763    1.105759    -42.958709                235.636508                -0.226760  
+5                 1.5098  0.450368    1.101399    -37.784943                257.158752                -0.330377  
+6                 1.5888  0.480234    1.095552    -39.629842                260.731185                -0.510566  
+7                 1.8088  0.482179    1.056843    -47.806854                285.189129                -0.596812  
+
+================ FASTEST BUDGETS WITH PAYOUT >= 80% ================
+          Budget Case  Target TF_EQ  Target MR_EQ  Target MR_FX  P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  \
+0  old_no_tf_fx_ratio         1.125         0.875           8.0                   0.9278                 281.799095                        249.0           0.072                  0.0   
+
+   Avg Cutoff Hits / Sim  Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Budget Speed Rank Score  
+0                 0.3516  0.233745    1.433601    -18.021468                  145.7989                 1.075586  
+
+================ STRATEGY ATTRIBUTION BY BUDGET ================
+             Budget Case Strategy  Target Budget Share %     Total PnL  PnL Contribution %  Variance Contribution Approx %  PnL In MaxDD Window  MaxDD Loss Contribution %  Avg Gross Exposure %  \
+14      balanced_tf_mrfx    TF_EQ              35.714286  5.030802e+06           55.537188                       75.182312        -2.193372e+06                 124.767843            185.183884   
+12      balanced_tf_mrfx    MR_EQ              28.571429  3.364037e+06           37.137055                       23.780343         2.013387e+05                 -11.452956             39.466033   
+13      balanced_tf_mrfx    MR_FX              35.714286  6.635991e+05            7.325756                        1.037345         4.158676e+05                 -23.656225             32.508836   
+2         equal_clusters    TF_EQ              33.333333  5.069222e+06           51.596187                       67.169176        -6.404784e+05                  35.319097            173.490335   
+0         equal_clusters    MR_EQ              33.333333  4.098603e+06           41.716920                       31.920921        -5.431309e+05                  29.950882             46.185281   
+1         equal_clusters    MR_FX              33.333333  6.569739e+05            6.686894                        0.909903        -5.252345e+04                   2.896399             30.340024   
+17  equity_core_balanced    TF_EQ              35.714286  6.276711e+06           52.019724                       67.195711        -8.135468e+05                  34.335663            185.123779   
+15  equity_core_balanced    MR_EQ              35.714286  5.136498e+06           42.569937                       32.209142        -9.133376e+05                  38.547323             49.604893   
+16  equity_core_balanced    MR_FX              28.571429  6.528127e+05            5.410339                        0.595147         4.467870e+04                  -1.885660             26.002513   
+18   mean_reversion_core    MR_EQ              38.461538  3.544986e+06           50.407644                       53.647815        -4.647244e+05                  36.478203             53.379838   
+20   mean_reversion_core    TF_EQ              23.076923  2.887282e+06           41.055470                       44.838889        -3.108342e+05                  24.398703            122.245864   
+19   mean_reversion_core    MR_FX              38.461538  6.003682e+05            8.536887                        1.513295        -4.032058e+04                   3.164934             35.013309   
+6             mr_eq_core    MR_EQ              42.857143  5.643581e+06           50.220926                       49.816342        -1.016376e+06                  44.488049             59.773146   
+8             mr_eq_core    TF_EQ              28.571429  4.971237e+06           44.237893                       49.555576        -5.818399e+05                  25.467854            149.860285   
+7             mr_eq_core    MR_FX              28.571429  6.226907e+05            5.541181                        0.628081         4.142883e+04                  -1.813391             26.003077   
+11            mr_fx_core    TF_EQ              28.571429  3.216027e+06           50.432676                       66.836138        -3.491572e+05                  33.066594            149.957137   
+9             mr_fx_core    MR_EQ              28.571429  2.537861e+06           39.797912                       31.200558        -3.117246e+05                  29.521576             39.400849   
+10            mr_fx_core    MR_FX              42.857143  6.229828e+05            9.769413                        1.963305        -6.389515e+04                   6.051129             39.018324   
+23    old_no_tf_fx_ratio    TF_EQ              11.250000  3.580074e+05           39.945522                       54.034004        -2.223622e+04                  22.050006             61.033001   
+22    old_no_tf_fx_ratio    MR_FX              80.000000  3.393088e+05           37.859181                       31.195573        -6.540227e+04                  64.854578             72.906028   
+21    old_no_tf_fx_ratio    MR_EQ               8.750000  1.989230e+05           22.195297                       14.770423        -6.386912e+03                   6.333427             11.859872   
+5             tf_eq_core    TF_EQ              42.857143  7.302697e+06           59.415959                       80.771176        -3.534233e+06                 113.520100            219.654199   
+3             tf_eq_core    MR_EQ              28.571429  4.328548e+06           35.217785                       18.705729         2.340020e+05                  -7.516181             39.532932   
+4             tf_eq_core    MR_FX              28.571429  6.595557e+05            5.366256                        0.523095         4.484568e+05                 -14.404503             26.001998   
+
+    Max Gross Exposure %  
+14            420.395278  
+12            345.734686  
+13            375.450306  
+2             394.603261  
+0             427.077305  
+1             349.239197  
+17            429.511023  
+15            471.889580  
+16            300.393324  
+18            525.016894  
+20            267.478704  
+19            397.062342  
+6             622.340775  
+8             342.154385  
+7             297.341812  
+11            327.936377  
+9             345.152240  
+10            445.893830  
+23            120.539138  
+22            830.411856  
+21             89.775720  
+5             517.706245  
+3             346.319450  
+4             303.487019  
+
+================ LEAVE-ONE-OUT SUMMARY ================
+             Budget Case Dropped Strategy             Drop Mode  P(Reach Payout Overall)  Delta Payout Overall vs Full  Mean Total Days To Payout  Delta Mean Total Days vs Full  Fail MaxLoss %  \
+24      balanced_tf_mrfx            MR_EQ        drop_no_renorm                   0.4304                        0.0148                 121.743959                      27.152525          0.2822   
+26      balanced_tf_mrfx            MR_FX        drop_no_renorm                   0.2760                       -0.1396                 133.950000                      39.358566          0.2544   
+28      balanced_tf_mrfx            TF_EQ        drop_no_renorm                   0.5872                        0.1716                 294.573569                     199.982135          0.1824   
+25      balanced_tf_mrfx            MR_EQ  drop_renorm_to_total                   0.2990                       -0.1166                  80.187960                     -14.403474          0.2748   
+27      balanced_tf_mrfx            MR_FX  drop_renorm_to_total                   0.0832                       -0.3324                  99.834135                       5.242701          0.2010   
+29      balanced_tf_mrfx            TF_EQ  drop_renorm_to_total                   0.4288                        0.0132                 186.895522                      92.304088          0.1946   
+0         equal_clusters            MR_EQ        drop_no_renorm                   0.4872                        0.0436                 134.447044                      38.654438          0.3116   
+2         equal_clusters            MR_FX        drop_no_renorm                   0.3310                       -0.1126                 134.473112                      38.680506          0.2820   
+4         equal_clusters            TF_EQ        drop_no_renorm                   0.5380                        0.0944                 248.681784                     152.889178          0.1794   
+1         equal_clusters            MR_EQ  drop_renorm_to_total                   0.2990                       -0.1446                  80.187960                     -15.604646          0.2748   
+3         equal_clusters            MR_FX  drop_renorm_to_total                   0.0930                       -0.3506                  99.858065                       4.065459          0.2090   
+5         equal_clusters            TF_EQ  drop_renorm_to_total                   0.3864                       -0.0572                 174.435818                      78.643212          0.1648   
+30  equity_core_balanced            MR_EQ        drop_no_renorm                   0.4186                        0.0510                 122.624462                      35.873102          0.2856   
+32  equity_core_balanced            MR_FX        drop_no_renorm                   0.2424                       -0.1252                 126.364686                      39.613326          0.2388   
+34  equity_core_balanced            TF_EQ        drop_no_renorm                   0.5366                        0.1690                 242.639955                     155.888595          0.1794   
+31  equity_core_balanced            MR_EQ  drop_renorm_to_total                   0.2718                       -0.0958                  72.210449                     -14.540911          0.2456   
+33  equity_core_balanced            MR_FX  drop_renorm_to_total                   0.0930                       -0.2746                  99.858065                      13.106704          0.2090   
+35  equity_core_balanced            TF_EQ  drop_renorm_to_total                   0.2870                       -0.0806                 164.917073                      78.165713          0.2142   
+36   mean_reversion_core            MR_EQ        drop_no_renorm                   0.7234                        0.1804                 222.244125                     100.586666          0.2650   
+38   mean_reversion_core            MR_FX        drop_no_renorm                   0.4482                       -0.0948                 157.499331                      35.841872          0.3232   
+40   mean_reversion_core            TF_EQ        drop_no_renorm                   0.5076                       -0.0354                 219.780142                      98.122683          0.2344   
+37   mean_reversion_core            MR_EQ  drop_renorm_to_total                   0.4040                       -0.1390                 108.326733                     -13.330726          0.2518   
+39   mean_reversion_core            MR_FX  drop_renorm_to_total                   0.1562                       -0.3868                 106.040973                     -15.616485          0.2304   
+41   mean_reversion_core            TF_EQ  drop_renorm_to_total                   0.3864                       -0.1566                 174.435818                      52.778359          0.1648   
+12            mr_eq_core            MR_EQ        drop_no_renorm                   0.5610                        0.1238                 173.914795                      73.716259          0.3188   
+14            mr_eq_core            MR_FX        drop_no_renorm                   0.3264                       -0.1108                 134.625613                      34.427077          0.3066   
+16            mr_eq_core            TF_EQ        drop_no_renorm                   0.4110                       -0.0262                 212.421898                     112.223362          0.2084   
+13            mr_eq_core            MR_EQ  drop_renorm_to_total                   0.2990                       -0.1382                  80.187960                     -20.010576          0.2748   
+15            mr_eq_core            MR_FX  drop_renorm_to_total                   0.1602                       -0.2770                 106.390762                       6.192225          0.2380   
+17            mr_eq_core            TF_EQ  drop_renorm_to_total                   0.2966                       -0.1406                 153.457856                      53.259320          0.1848   
+18            mr_fx_core            MR_EQ        drop_no_renorm                   0.5710                        0.0270                 168.363923                      50.444438          0.3048   
+20            mr_fx_core            MR_FX        drop_no_renorm                   0.4464                       -0.0976                 155.945789                      38.026303          0.3354   
+22            mr_fx_core            TF_EQ        drop_no_renorm                   0.6070                        0.0630                 286.844811                     168.925325          0.1880   
+19            mr_fx_core            MR_EQ  drop_renorm_to_total                   0.3912                       -0.1528                 104.599182                     -13.320303          0.2952   
+21            mr_fx_core            MR_FX  drop_renorm_to_total                   0.0930                       -0.4510                  99.858065                     -18.061421          0.2090   
+23            mr_fx_core            TF_EQ  drop_renorm_to_total                   0.5020                       -0.0420                 191.419522                      73.500037          0.2220   
+42    old_no_tf_fx_ratio            MR_EQ        drop_no_renorm                   0.9200                       -0.0078                 334.584130                      52.785036          0.0766   
+44    old_no_tf_fx_ratio            MR_FX        drop_no_renorm                   0.8768                       -0.0510                 474.132299                     192.333205          0.0938   
+46    old_no_tf_fx_ratio            TF_EQ        drop_no_renorm                   0.9550                        0.0272                 440.512042                     158.712947          0.0302   
+43    old_no_tf_fx_ratio            MR_EQ  drop_renorm_to_total                   0.8582                       -0.0696                 297.725938                      15.926843          0.0976   
+45    old_no_tf_fx_ratio            MR_FX  drop_renorm_to_total                   0.0820                       -0.8458                  99.678049                    -182.121046          0.2024   
+47    old_no_tf_fx_ratio            TF_EQ  drop_renorm_to_total                   0.8464                       -0.0814                 381.896030                     100.096936          0.0462   
+6             tf_eq_core            MR_EQ        drop_no_renorm                   0.3282                       -0.0062                  97.980500                      16.970930          0.3068   
+8             tf_eq_core            MR_FX        drop_no_renorm                   0.2192                       -0.1152                 122.573905                      41.564336          0.2880   
+10            tf_eq_core            TF_EQ        drop_no_renorm                   0.5590                        0.2246                 303.578533                     222.568964          0.1804   
+7             tf_eq_core            MR_EQ  drop_renorm_to_total                   0.2438                       -0.0906                  66.936833                     -14.072736          0.2152   
+9             tf_eq_core            MR_FX  drop_renorm_to_total                   0.0696                       -0.2648                 100.339080                      19.329511          0.2030   
+11            tf_eq_core            TF_EQ  drop_renorm_to_total                   0.3864                        0.0520                 174.435818                      93.426248          0.1648   
+
+    Fail MaxDailyLoss %  Raw Sharpe  Delta Raw Sharpe vs Full  
+24               0.2874    0.887046                 -0.214354  
+26               0.4696    0.992592                 -0.108807  
+28               0.2300    0.951690                 -0.149709  
+25               0.4262    0.896436                 -0.204964  
+27               0.7158    1.014090                 -0.087309  
+29               0.3766    0.960319                 -0.141080  
+0                0.2012    0.885199                 -0.226775  
+2                0.3870    1.010632                 -0.101342  
+4                0.2826    0.915307                 -0.196667  
+1                0.4262    0.896436                 -0.215539  
+3                0.6980    1.030918                 -0.081056  
+5                0.4488    0.925126                 -0.186848  
+30               0.2958    0.862088                 -0.233464  
+32               0.5188    1.013628                 -0.081924  
+34               0.2840    0.884157                 -0.211395  
+31               0.4826    0.873996                 -0.221556  
+33               0.6980    1.030918                 -0.064634  
+35               0.4988    0.896686                 -0.198866  
+36               0.0116    0.953467                 -0.188297  
+38               0.2286    1.012547                 -0.129218  
+40               0.2580    0.918310                 -0.223454  
+37               0.3442    0.966840                 -0.174925  
+39               0.6134    1.034672                 -0.107092  
+41               0.4488    0.925126                 -0.216638  
+12               0.1202    0.881229                 -0.224530  
+14               0.3670    1.021496                 -0.084263  
+16               0.3806    0.866453                 -0.239305  
+13               0.4262    0.896436                 -0.209323  
+15               0.6018    1.038186                 -0.067573  
+17               0.5186    0.878512                 -0.227247  
+18               0.1242    0.940289                 -0.212058  
+20               0.2182    1.004505                 -0.147842  
+22               0.2048    0.988686                 -0.163662  
+19               0.3136    0.949880                 -0.202467  
+21               0.6980    1.030918                 -0.121429  
+23               0.2760    0.994475                 -0.157872  
+42               0.0000    1.284100                 -0.149501  
+44               0.0000    0.957711                 -0.475889  
+46               0.0000    1.329868                 -0.103732  
+43               0.0434    1.285338                 -0.148263  
+45               0.7156    1.011470                 -0.422130  
+47               0.1032    1.330372                 -0.103229  
+6                0.3650    0.849836                 -0.207007  
+8                0.4928    0.979328                 -0.077515  
+10               0.2604    0.912537                 -0.144306  
+7                0.5410    0.858695                 -0.198148  
+9                0.7274    0.995683                 -0.061160  
+11               0.4488    0.925126                 -0.131717  
+
+Exported CSV files:
+  strategy_budget_portfolio_summary.csv
+  strategy_budget_attribution.csv
+  strategy_budget_cutoff_attribution.csv
+  strategy_budget_leave_one_out.csv
+
+--- IMPORTANT INTERPRETATION NOTE ---
+All budget cases are normalized to the same total strategy budget, so this step compares strategy mix rather than total exposure.
+Internal weights are fixed to: TF_EQ rolling ERC 504, MR_EQ equal, MR_FX rolling ERC 504.
+MR_FX regimefilter is ON. No drawdown/recovery exposure scaling is used.
+Daily cutoff sim uses H1-observed execution: if price/equity jumps through cutoff, exit is simulated at the first observed H1 level, not ideal cutoff.
 
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
