@@ -593,6 +593,14 @@ MR_EQ equal
 MR_FX regime on/off
 realistiska costs
 block bootstrap/day-path bootstrap
-Eller så jämför vi olika rolling ERCs i simuleringarna.
+Eller så jämför vi olika rolling ERCs i simuleringarna. Det är nog bättre. Vi bör inte optimera ERC på portfölj nivå eftersom en ERC-metod som ger bäst Sharpe kan vara sämre i FTMO 
+eftersom den kan ge fler cutoff-events eller längre recovery. Vi testar tre olika:
+Rolling ERC 252
+Mer adaptiv, reagerar snabbare på ny volatilitet. Kan vara bra efter regimeskiften, men riskerar att jaga brus och byta vikter för ofta.
+Rolling ERC 504
+Bra kompromiss. Cirka två tradingår. Mindre brus än 252 men fortfarande relativt adaptiv.
+Rolling ERC 756
+Mest stabil. Cirka tre tradingår. Sannolikt bäst för produktion om resultaten är nära, eftersom den minskar turnover och parameterbrus.
+Viktigast av allt är att ERC ska vara internt per cluster och inte över hela portföljen, det skulle blanda strategi-edge med marknadsvolatilitet
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
