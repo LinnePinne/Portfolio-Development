@@ -1561,6 +1561,75 @@ All budget cases are normalized to the same total strategy budget, so this step 
 Internal weights are fixed to: TF_EQ rolling ERC 504, MR_EQ equal, MR_FX rolling ERC 504.
 MR_FX regimefilter is ON. No drawdown/recovery exposure scaling is used.
 Daily cutoff sim uses H1-observed execution: if price/equity jumps through cutoff, exit is simulated at the first observed H1 level, not ideal cutoff.
+De nya budgeterna var är för aggressiva mot equity strategierna och för passiva mot MR_FX. Problemet är att vi normaliserade alla budgetar till total 10.0, vilket var rätt 
+metod för att jämföra strategy mix, men resultatet visar att TF_EQ och MR_EQ är mycket mer aggressiva per budget-enhet än MR_FX.
+Exempel:
+old_no_tf_fx_ratio:
+TF_EQ = 1.125
+MR_EQ = 0.875
+MR_FX = 8.0
+Trots att MR_FX har 80% target budget, bidrar den inte med 80% risk/return. I old-case attribution:
+TF_EQ: 39.9% PnL, 54.0% variance contribution
+MR_FX: 37.9% PnL, 31.2% variance contribution
+MR_EQ: 22.2% PnL, 14.8% variance contribution
+Det säger oss att de råa strategy-targets inte är direkt jämförbara mellan strategierna. En 1.0 i TF_EQ är inte samma praktiska risk som en 1.0 i MR_FX.
+Varför de andra budgetarna föll, titta på exempelvis equal_clusters:
+TF_EQ = 3.33
+MR_EQ = 3.33
+MR_FX = 3.33
+Det höjer TF_EQ nästan 3x och MR_EQ nästan 4x jämfört med old-case. Det är inte en liten ombalansering. Det är en kraftig equity-risk-ökning. Resultatet blev därför:
+Payout: 44.36%
+Fail MaxLoss: 27.88%
+Fail MaxDailyLoss: 27.76%
+Det är snabbt när det fungerar, men för ostabilt. Leave-one-out säger också mycket
+För old_no_tf_fx_ratio:
+Full:
+Payout 92.78%
+Mean days 281.8
+Without MR_FX, no renorm:
+Payout 87.68%
+Mean days 474.1
+Without TF_EQ, no renorm:
+Payout 95.50%
+Mean days 440.5
+Without MR_EQ, no renorm:
+Payout 92.00%
+Mean days 334.6
+MR_FX är alltså viktigt för både payout och speed. Tar vi bort den blir portföljen långsammare och sämre. TF_EQ ökar speed kraftigt men adderar risk. Tar vi bort
+TF_EQ ökar payout probability, men payout går mycket långsammare. MR_EQ hjälper, men är minst kritisk. Den förbättrar speed lite och bidrar positivt, men är inte 
+lika central som MR_FX/TF_EQ. Det här är exakt den typ av information vi ville få. Den nya slutsatsen för strategi-viktning är att vi inte ska leta runt 1:1:1. 
+Vi ska leta runt old-ratio, men med gradvis mer TF_EQ/MR_EQ för att få snabbare payout utan att falla under 80%. Nästa budget-grid bör vara ungefär:
 
+STRATEGY_BUDGET_GRID = []
+
+for tf_eq in [1.125, 1.5, 2.0, 2.5, 3.0]:
+    for mr_eq in [0.875, 1.0, 1.25, 1.5, 2.0]:
+        mr_fx = 10.0 - tf_eq - mr_eq
+        if mr_fx >= 5.0:
+            STRATEGY_BUDGET_GRID.append({
+                "TF_EQ": tf_eq,
+                "MR_EQ": mr_eq,
+                "MR_FX": mr_fx,
+            })
+
+Det här behåller MR_FX som huvudstabilisator men testar hur mycket TF_EQ/MR_EQ vi kan lägga till för att öka speed. För budget-steget ska vi filtrera efter 
+P(Reach Payout Overall) >= 80%, Fail MaxDailyLoss % helst nära 0 och Fail MaxLoss % rimlig. Sedan sortera på Mean Total Days To Payout och Median Total Days 
+To Payout. Alltså exakta filosofin snabbare payout, men fortfarande minst cirka 80% sannolikhet. Så för nästa test gör vi detta:
+1. Behåll:
+   TF_EQ rolling ERC 504
+   MR_EQ equal
+   MR_FX rolling ERC 504
+   MR_FX regimefilter ON
+   exposure = 0.75
+   cutoff = -4.0%
+
+2. Ersätt strategy-budget-cases med ett anchor-grid runt old_no_tf_fx_ratio.
+
+3. Skriv ut:
+   FASTEST BUDGETS WITH PAYOUT >= 80%
+   FASTEST BUDGETS WITH PAYOUT >= 85%
+   FASTEST BUDGETS WITH PAYOUT >= 90%
+
+4. Behåll attribution + leave-one-out
 
 målet med denna portfölj är att göra den så effektiv som möjligt för att nå payout. FTMO har en max daily loss, från dagens equtiy high till -5%. Därför ska vi implementera en cutoff precis som vi har i nuvarande livebot där alla positioner stängs Därför tänker vi inte kolla på worst intraday drawdown på portfölj nivå
