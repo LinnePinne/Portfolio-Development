@@ -3671,3 +3671,19 @@ This version is not another optimizer. It is a stress/kill-test for three select
 Day-path stresses are deterministic proxies: cost drag, missed-winner haircut, loss-tail multiplier, bad sequencing, and delayed/gapped cutoff execution.
 Daily cutoff sim still uses historical H1 day paths; live tick/equity monitoring can be better or worse depending on execution and broker behavior.
 Use this step to eliminate fragile candidates, not to overfit a new optimum.
+
+Det här är en röd flagg, inte en bekräftelse. Ingen av de tre kandidaterna klarar kill-testet. Alla tre klarar baseline, men de faller för hårt under 
+realistiska negativa antaganden. Stress-summary säger uttryckligen Stress Gate Pass = False för alla tre kandidater och “Pass Single Stress >=75%” är 
+också False för alla. De stora problemen är:
+cost_drag_7bp
+missed_winners_haircut
+loss_tail_110pct
+combined_moderate
+combined_hard
+Exempel:
+| Kandidat            | Baseline payout | Cost drag 7bp | Missed winners | Loss tail 110% | Combined moderate | Combined hard |
+| ------------------- | --------------: | ------------: | -------------: | -------------: | ----------------: | ------------: |
+| main_balanced_speed |          82.08% |        46.80% |         53.30% |         63.14% |            45.52% |         1.92% |
+| max_speed_80        |          80.04% |        47.40% |         49.08% |         63.70% |            43.66% |         2.24% |
+| safer_fast_85       |          86.58% |        51.68% |         52.34% |         67.04% |            47.60% |         0.82% |
+Det betyder att portföljen fortfarande är för beroende av att edge, fills och kostnader beter sig nära backtestet.
