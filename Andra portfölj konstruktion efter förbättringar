@@ -3273,3 +3273,401 @@ Internal weights are fixed to: TF_EQ rolling ERC 504, MR_EQ equal, MR_FX rolling
 MR_FX regimefilter is ON. No drawdown/recovery exposure scaling is used.
 Daily cutoff sim uses H1-observed execution: if price/equity jumps through cutoff, exit is simulated at the first observed H1 level, not ideal cutoff.
 Budget targets still sum to the same total budget; Exposure Factor scales the whole portfolio on top of that mix.
+
+De tre bästa kandidaterna är
+| Kandidat                | Budget                              | Exposure | Cutoff |     Payout | Mean days | Median days | MaxLoss fail | DailyLoss fail |
+| ----------------------- | ----------------------------------- | -------: | -----: | ---------: | --------: | ----------: | -----------: | -------------: |
+| **A: snabbast ≥80%**    | TF 1.75 / MR_EQ 0.875 / MR_FX 7.375 |     0.85 |  -3.5% |     80.04% |     192.5 |         167 |       19.18% |          0.78% |
+| **B: bättre buffer**    | TF 1.125 / MR_EQ 1.5 / MR_FX 7.375  |     0.90 |  -3.5% |     82.08% |     200.3 |         178 |       15.56% |          2.36% |
+| **C: ren 85%-frontier** | TF 1.75 / MR_EQ 1.0 / MR_FX 7.25    |     0.70 |  -3.5% |     86.58% |     241.0 |         209 |       12.96% |          0.46% |
+Körningen visar också att 90%-frontiern blir betydligt långsammare: bästa ≥90%-case är TF_EQ 1.125 / MR_EQ 1.25 / MR_FX 7.625, exposure 0.75, cutoff -4.0%,
+med 91.60% payout och 261.1 mean days. Av dessa tre ser kandidat B bäst ut. Den är bara 7.8 dagar långsammare i mean days än snabbaste 80%-caset men har bättre
+payout-buffer och lägre maxloss-fail. Nackdelen är högre dailyloss-fail än kandidat A, så den behöver stressas mot mer konservativ intraday cutoff. Ett viktigt 
+mönster är att -3.5% cutoff dominerar de snabbaste ≥80% och ≥85%-fallen. Det är logiskt, den blockerar tidigare och minskar hard daily-loss-fail, men den påverkar
+inte speed för mycket eftersom strategin fortfarande kan nå payout med högre exposure. Jag skulle däremot inte dra slutsatsen att -3.5% är slutgiltigt för live.
+Det är H1-observerad cutoff. I live där equity kan övervakas oftare kan en -3.5% soft-cutoff och kanske en hård kill runt -4.0% vara mer realistisk än en enda 
+mekanisk nivå. Nästa kodsteg bör vara stress/kill-test på dessa tre, inte mer optimering. Stressarna bör vara:
+1. Slippage/cost stress
+2. Delayed cutoff execution
+3. Missed trades
+4. Worse H1 gap-through cutoff
+5. MR_FX regimefilter off as robustness check
+6. Block bootstrap with worse sequencing
+7. Month/year exclusion sensitivity
+================ STRESS RESULTS - RANKED ================
+              Candidate          Stress Scenario  Is Combined Stress  MR_FX Regime On  Exposure Factor  Daily Cutoff   Cutoff Execution Mode  Block Len  Gain Multiplier  Loss Multiplier  Daily Drag  \
+0         safer_fast_85    bad_sequence_block120               False             True             0.70        -0.035             observed_h1        120             1.00             1.00      0.0000   
+1          max_speed_80    bad_sequence_block120               False             True             0.85        -0.035             observed_h1        120             1.00             1.00      0.0000   
+2         safer_fast_85     bad_sequence_block60               False             True             0.70        -0.035             observed_h1         60             1.00             1.00      0.0000   
+3   main_balanced_speed    bad_sequence_block120               False             True             0.90        -0.035             observed_h1        120             1.00             1.00      0.0000   
+4   main_balanced_speed     bad_sequence_block60               False             True             0.90        -0.035             observed_h1         60             1.00             1.00      0.0000   
+5         safer_fast_85                 baseline               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0000   
+6         safer_fast_85        regime_filter_off               False            False             0.70        -0.035             observed_h1         20             1.00             1.00      0.0000   
+7          max_speed_80     bad_sequence_block60               False             True             0.85        -0.035             observed_h1         60             1.00             1.00      0.0000   
+8   main_balanced_speed                 baseline               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0000   
+9   main_balanced_speed        regime_filter_off               False            False             0.90        -0.035             observed_h1         20             1.00             1.00      0.0000   
+10         max_speed_80                 baseline               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0000   
+11         max_speed_80        regime_filter_off               False            False             0.85        -0.035             observed_h1         20             1.00             1.00      0.0000   
+12        safer_fast_85  cutoff_gap_penalty_25bp               False             True             0.70        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+13        safer_fast_85      cutoff_delayed_1bar               False             True             0.70        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+14        safer_fast_85      cutoff_delayed_2bar               False             True             0.70        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+15         max_speed_80  cutoff_gap_penalty_25bp               False             True             0.85        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+16  main_balanced_speed      cutoff_delayed_1bar               False             True             0.90        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+17  main_balanced_speed  cutoff_gap_penalty_25bp               False             True             0.90        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+18         max_speed_80      cutoff_delayed_1bar               False             True             0.85        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+19  main_balanced_speed      cutoff_delayed_2bar               False             True             0.90        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+20        safer_fast_85            cost_drag_3bp               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0003   
+21         max_speed_80            cost_drag_3bp               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0003   
+22  main_balanced_speed            cost_drag_3bp               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0003   
+23         max_speed_80      cutoff_delayed_2bar               False             True             0.85        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+24         max_speed_80         loss_tail_110pct               False             True             0.85        -0.035             observed_h1         20             1.00             1.10      0.0000   
+25        safer_fast_85         loss_tail_110pct               False             True             0.70        -0.035             observed_h1         20             1.00             1.10      0.0000   
+26  main_balanced_speed         loss_tail_110pct               False             True             0.90        -0.035             observed_h1         20             1.00             1.10      0.0000   
+27  main_balanced_speed   missed_winners_haircut               False             True             0.90        -0.035             observed_h1         20             0.85             1.02      0.0000   
+28         max_speed_80            cost_drag_7bp               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0007   
+29         max_speed_80   missed_winners_haircut               False             True             0.85        -0.035             observed_h1         20             0.85             1.02      0.0000   
+30        safer_fast_85            cost_drag_7bp               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0007   
+31        safer_fast_85   missed_winners_haircut               False             True             0.70        -0.035             observed_h1         20             0.85             1.02      0.0000   
+32  main_balanced_speed            cost_drag_7bp               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0007   
+33         max_speed_80        combined_moderate                True             True             0.85        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+34        safer_fast_85        combined_moderate                True             True             0.70        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+35  main_balanced_speed        combined_moderate                True             True             0.90        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+36         max_speed_80            combined_hard                True             True             0.85        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+37  main_balanced_speed            combined_hard                True             True             0.90        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+38        safer_fast_85            combined_hard                True             True             0.70        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+
+    P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  P75 Total Days To Payout  P90 Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  Avg Cutoff Hits / Sim  \
+0                    0.8892                 247.288124                        225.0                    307.00                     404.0          0.1020               0.0086                 0.5646   
+1                    0.8500                 201.565647                        180.0                    250.75                     334.0          0.1416               0.0084                 1.0402   
+2                    0.8792                 243.111692                        216.0                    304.00                     407.0          0.1142               0.0066                 0.5968   
+3                    0.8504                 203.997178                        184.0                    252.00                     331.9          0.1330               0.0166                 0.7528   
+4                    0.8438                 203.185589                        184.0                    250.00                     333.0          0.1360               0.0202                 0.8460   
+5                    0.8658                 241.013860                        209.0                    305.00                     417.2          0.1296               0.0046                 0.6090   
+6                    0.8622                 240.786824                        209.0                    304.50                     419.0          0.1328               0.0050                 0.6050   
+7                    0.8306                 196.258849                        175.0                    247.00                     334.0          0.1608               0.0086                 1.1342   
+8                    0.8208                 200.259016                        178.0                    251.25                     339.7          0.1556               0.0236                 0.8678   
+9                    0.8184                 200.217498                        177.0                    250.00                     340.9          0.1578               0.0238                 0.9084   
+10                   0.8004                 192.482509                        167.0                    244.00                     334.9          0.1918               0.0078                 1.1668   
+11                   0.8000                 192.261500                        167.0                    244.00                     334.1          0.1922               0.0078                 1.1654   
+12                   0.8406                 239.766595                        208.0                    302.00                     418.8          0.1302               0.0290                 0.5968   
+13                   0.8182                 237.595942                        207.0                    299.00                     411.0          0.1264               0.0554                 0.5898   
+14                   0.8160                 238.200490                        208.0                    300.00                     412.0          0.1284               0.0556                 0.5908   
+15                   0.7714                 191.037335                        167.0                    243.00                     333.0          0.1948               0.0338                 1.1456   
+16                   0.7862                 196.462987                        174.0                    245.00                     333.0          0.1388               0.0750                 0.8304   
+17                   0.7770                 197.247619                        175.0                    247.00                     334.6          0.1598               0.0632                 0.8196   
+18                   0.7642                 190.874902                        166.0                    242.00                     333.0          0.1798               0.0560                 1.1432   
+19                   0.7738                 195.657017                        172.0                    244.00                     331.2          0.1418               0.0844                 0.8172   
+20                   0.7562                 282.431367                        242.0                    361.00                     505.0          0.2368               0.0060                 0.6880   
+21                   0.6900                 219.126667                        186.0                    276.75                     397.1          0.3020               0.0078                 1.3476   
+22                   0.7054                 240.324639                        209.0                    301.50                     421.0          0.2672               0.0270                 1.0654   
+23                   0.6804                 185.651088                        162.0                    234.75                     321.0          0.1798               0.1398                 1.0702   
+24                   0.6370                 206.021664                        175.0                    260.00                     371.0          0.3452               0.0178                 1.3778   
+25                   0.6704                 266.058174                        227.0                    335.25                     479.0          0.2716               0.0570                 1.1942   
+26                   0.6314                 218.897688                        193.0                    271.00                     388.0          0.2730               0.0954                 1.2592   
+27                   0.5330                 304.497561                        263.0                    390.00                     542.2          0.4278               0.0372                 1.3906   
+28                   0.4740                 247.167511                        212.0                    319.00                     446.2          0.5176               0.0084                 1.4368   
+29                   0.4908                 278.568052                        237.0                    353.00                     508.4          0.4936               0.0150                 1.6116   
+30                   0.5168                 327.982198                        279.0                    427.00                     606.0          0.4742               0.0054                 0.8646   
+31                   0.5234                 365.472297                        317.0                    483.00                     665.8          0.4574               0.0114                 1.0386   
+32                   0.4680                 295.717949                        254.0                    380.00                     541.0          0.5024               0.0276                 1.2608   
+33                   0.4366                 274.060467                        239.0                    351.00                     487.4          0.4248               0.1378                 1.4900   
+34                   0.4760                 358.884034                        313.5                    469.00                     634.1          0.3920               0.1246                 0.9352   
+35                   0.4552                 296.641916                        266.0                    382.00                     514.0          0.3292               0.2150                 1.1884   
+36                   0.0224                 272.544643                        214.0                    327.75                     534.5          0.7858               0.1910                 1.4224   
+37                   0.0192                 258.239583                        220.5                    385.50                     510.0          0.7112               0.2694                 1.1426   
+38                   0.0082                 340.219512                        307.0                    405.00                     511.0          0.8152               0.1732                 1.1490   
+
+    Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Stress Rank Score  
+0   0.276101    1.309754    -20.978330                173.439793           1.005534  
+1   0.270884    1.303958    -20.952006                172.880804           0.987684  
+2   0.276101    1.309754    -20.978330                173.439793           0.985403  
+3   0.259106    1.412412    -19.419663                148.621862           0.975529  
+4   0.259106    1.412412    -19.419663                148.621862           0.950676  
+5   0.276101    1.309754    -20.978330                173.439793           0.949475  
+6   0.273365    1.292775    -22.952879                174.992799           0.937883  
+7   0.270884    1.303958    -20.952006                172.880804           0.936711  
+8   0.259106    1.412412    -19.419663                148.621862           0.878774  
+9   0.256320    1.389433    -21.516075                150.191855           0.870422  
+10  0.270884    1.303958    -20.952006                172.880804           0.848676  
+11  0.268107    1.286367    -22.963874                174.460475           0.847942  
+12  0.276101    1.309754    -20.978330                173.439793           0.840566  
+13  0.276101    1.309754    -20.978330                173.439793           0.740012  
+14  0.276101    1.309754    -20.978330                173.439793           0.731091  
+15  0.270884    1.303958    -20.952006                172.880804           0.725751  
+16  0.259106    1.412412    -19.419663                148.621862           0.711939  
+17  0.259106    1.412412    -19.419663                148.621862           0.694935  
+18  0.270884    1.303958    -20.952006                172.880804           0.675031  
+19  0.259106    1.412412    -19.419663                148.621862           0.662035  
+20  0.276101    1.309754    -20.978330                173.439793           0.488442  
+21  0.270884    1.303958    -20.952006                172.880804           0.421707  
+22  0.259106    1.412412    -19.419663                148.621862           0.397834  
+23  0.270884    1.303958    -20.952006                172.880804           0.311720  
+24  0.270884    1.303958    -20.952006                172.880804           0.269168  
+25  0.276101    1.309754    -20.978330                173.439793           0.181713  
+26  0.259106    1.412412    -19.419663                148.621862           0.123214  
+27  0.259106    1.412412    -19.419663                148.621862          -0.336900  
+28  0.270884    1.303958    -20.952006                172.880804          -0.352287  
+29  0.270884    1.303958    -20.952006                172.880804          -0.385436  
+30  0.276101    1.309754    -20.978330                173.439793          -0.401251  
+31  0.276101    1.309754    -20.978330                173.439793          -0.477517  
+32  0.259106    1.412412    -19.419663                148.621862          -0.512903  
+33  0.270884    1.303958    -20.952006                172.880804          -0.702351  
+34  0.276101    1.309754    -20.978330                173.439793          -0.756062  
+35  0.259106    1.412412    -19.419663                148.621862          -0.792089  
+36  0.270884    1.303958    -20.952006                172.880804          -2.110536  
+37  0.259106    1.412412    -19.419663                148.621862          -2.181125  
+38  0.276101    1.309754    -20.978330                173.439793          -2.297639  
+
+================ STRESS RESULTS - BY CANDIDATE / SCENARIO ================
+              Candidate          Stress Scenario  Is Combined Stress  MR_FX Regime On  Exposure Factor  Daily Cutoff   Cutoff Execution Mode  Block Len  Gain Multiplier  Loss Multiplier  Daily Drag  \
+3   main_balanced_speed    bad_sequence_block120               False             True             0.90        -0.035             observed_h1        120             1.00             1.00      0.0000   
+4   main_balanced_speed     bad_sequence_block60               False             True             0.90        -0.035             observed_h1         60             1.00             1.00      0.0000   
+8   main_balanced_speed                 baseline               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0000   
+22  main_balanced_speed            cost_drag_3bp               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0003   
+32  main_balanced_speed            cost_drag_7bp               False             True             0.90        -0.035             observed_h1         20             1.00             1.00      0.0007   
+16  main_balanced_speed      cutoff_delayed_1bar               False             True             0.90        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+19  main_balanced_speed      cutoff_delayed_2bar               False             True             0.90        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+17  main_balanced_speed  cutoff_gap_penalty_25bp               False             True             0.90        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+26  main_balanced_speed         loss_tail_110pct               False             True             0.90        -0.035             observed_h1         20             1.00             1.10      0.0000   
+27  main_balanced_speed   missed_winners_haircut               False             True             0.90        -0.035             observed_h1         20             0.85             1.02      0.0000   
+9   main_balanced_speed        regime_filter_off               False            False             0.90        -0.035             observed_h1         20             1.00             1.00      0.0000   
+37  main_balanced_speed            combined_hard                True             True             0.90        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+35  main_balanced_speed        combined_moderate                True             True             0.90        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+1          max_speed_80    bad_sequence_block120               False             True             0.85        -0.035             observed_h1        120             1.00             1.00      0.0000   
+7          max_speed_80     bad_sequence_block60               False             True             0.85        -0.035             observed_h1         60             1.00             1.00      0.0000   
+10         max_speed_80                 baseline               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0000   
+21         max_speed_80            cost_drag_3bp               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0003   
+28         max_speed_80            cost_drag_7bp               False             True             0.85        -0.035             observed_h1         20             1.00             1.00      0.0007   
+18         max_speed_80      cutoff_delayed_1bar               False             True             0.85        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+23         max_speed_80      cutoff_delayed_2bar               False             True             0.85        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+15         max_speed_80  cutoff_gap_penalty_25bp               False             True             0.85        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+24         max_speed_80         loss_tail_110pct               False             True             0.85        -0.035             observed_h1         20             1.00             1.10      0.0000   
+29         max_speed_80   missed_winners_haircut               False             True             0.85        -0.035             observed_h1         20             0.85             1.02      0.0000   
+11         max_speed_80        regime_filter_off               False            False             0.85        -0.035             observed_h1         20             1.00             1.00      0.0000   
+36         max_speed_80            combined_hard                True             True             0.85        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+33         max_speed_80        combined_moderate                True             True             0.85        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+0         safer_fast_85    bad_sequence_block120               False             True             0.70        -0.035             observed_h1        120             1.00             1.00      0.0000   
+2         safer_fast_85     bad_sequence_block60               False             True             0.70        -0.035             observed_h1         60             1.00             1.00      0.0000   
+5         safer_fast_85                 baseline               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0000   
+20        safer_fast_85            cost_drag_3bp               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0003   
+30        safer_fast_85            cost_drag_7bp               False             True             0.70        -0.035             observed_h1         20             1.00             1.00      0.0007   
+13        safer_fast_85      cutoff_delayed_1bar               False             True             0.70        -0.035            delayed_1bar         20             1.00             1.00      0.0000   
+14        safer_fast_85      cutoff_delayed_2bar               False             True             0.70        -0.035            delayed_2bar         20             1.00             1.00      0.0000   
+12        safer_fast_85  cutoff_gap_penalty_25bp               False             True             0.70        -0.035   observed_h1_plus_25bp         20             1.00             1.00      0.0000   
+25        safer_fast_85         loss_tail_110pct               False             True             0.70        -0.035             observed_h1         20             1.00             1.10      0.0000   
+31        safer_fast_85   missed_winners_haircut               False             True             0.70        -0.035             observed_h1         20             0.85             1.02      0.0000   
+6         safer_fast_85        regime_filter_off               False            False             0.70        -0.035             observed_h1         20             1.00             1.00      0.0000   
+38        safer_fast_85            combined_hard                True             True             0.70        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+34        safer_fast_85        combined_moderate                True             True             0.70        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+
+    P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  P75 Total Days To Payout  P90 Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  Avg Cutoff Hits / Sim  \
+3                    0.8504                 203.997178                        184.0                    252.00                     331.9          0.1330               0.0166                 0.7528   
+4                    0.8438                 203.185589                        184.0                    250.00                     333.0          0.1360               0.0202                 0.8460   
+8                    0.8208                 200.259016                        178.0                    251.25                     339.7          0.1556               0.0236                 0.8678   
+22                   0.7054                 240.324639                        209.0                    301.50                     421.0          0.2672               0.0270                 1.0654   
+32                   0.4680                 295.717949                        254.0                    380.00                     541.0          0.5024               0.0276                 1.2608   
+16                   0.7862                 196.462987                        174.0                    245.00                     333.0          0.1388               0.0750                 0.8304   
+19                   0.7738                 195.657017                        172.0                    244.00                     331.2          0.1418               0.0844                 0.8172   
+17                   0.7770                 197.247619                        175.0                    247.00                     334.6          0.1598               0.0632                 0.8196   
+26                   0.6314                 218.897688                        193.0                    271.00                     388.0          0.2730               0.0954                 1.2592   
+27                   0.5330                 304.497561                        263.0                    390.00                     542.2          0.4278               0.0372                 1.3906   
+9                    0.8184                 200.217498                        177.0                    250.00                     340.9          0.1578               0.0238                 0.9084   
+37                   0.0192                 258.239583                        220.5                    385.50                     510.0          0.7112               0.2694                 1.1426   
+35                   0.4552                 296.641916                        266.0                    382.00                     514.0          0.3292               0.2150                 1.1884   
+1                    0.8500                 201.565647                        180.0                    250.75                     334.0          0.1416               0.0084                 1.0402   
+7                    0.8306                 196.258849                        175.0                    247.00                     334.0          0.1608               0.0086                 1.1342   
+10                   0.8004                 192.482509                        167.0                    244.00                     334.9          0.1918               0.0078                 1.1668   
+21                   0.6900                 219.126667                        186.0                    276.75                     397.1          0.3020               0.0078                 1.3476   
+28                   0.4740                 247.167511                        212.0                    319.00                     446.2          0.5176               0.0084                 1.4368   
+18                   0.7642                 190.874902                        166.0                    242.00                     333.0          0.1798               0.0560                 1.1432   
+23                   0.6804                 185.651088                        162.0                    234.75                     321.0          0.1798               0.1398                 1.0702   
+15                   0.7714                 191.037335                        167.0                    243.00                     333.0          0.1948               0.0338                 1.1456   
+24                   0.6370                 206.021664                        175.0                    260.00                     371.0          0.3452               0.0178                 1.3778   
+29                   0.4908                 278.568052                        237.0                    353.00                     508.4          0.4936               0.0150                 1.6116   
+11                   0.8000                 192.261500                        167.0                    244.00                     334.1          0.1922               0.0078                 1.1654   
+36                   0.0224                 272.544643                        214.0                    327.75                     534.5          0.7858               0.1910                 1.4224   
+33                   0.4366                 274.060467                        239.0                    351.00                     487.4          0.4248               0.1378                 1.4900   
+0                    0.8892                 247.288124                        225.0                    307.00                     404.0          0.1020               0.0086                 0.5646   
+2                    0.8792                 243.111692                        216.0                    304.00                     407.0          0.1142               0.0066                 0.5968   
+5                    0.8658                 241.013860                        209.0                    305.00                     417.2          0.1296               0.0046                 0.6090   
+20                   0.7562                 282.431367                        242.0                    361.00                     505.0          0.2368               0.0060                 0.6880   
+30                   0.5168                 327.982198                        279.0                    427.00                     606.0          0.4742               0.0054                 0.8646   
+13                   0.8182                 237.595942                        207.0                    299.00                     411.0          0.1264               0.0554                 0.5898   
+14                   0.8160                 238.200490                        208.0                    300.00                     412.0          0.1284               0.0556                 0.5908   
+12                   0.8406                 239.766595                        208.0                    302.00                     418.8          0.1302               0.0290                 0.5968   
+25                   0.6704                 266.058174                        227.0                    335.25                     479.0          0.2716               0.0570                 1.1942   
+31                   0.5234                 365.472297                        317.0                    483.00                     665.8          0.4574               0.0114                 1.0386   
+6                    0.8622                 240.786824                        209.0                    304.50                     419.0          0.1328               0.0050                 0.6050   
+38                   0.0082                 340.219512                        307.0                    405.00                     511.0          0.8152               0.1732                 1.1490   
+34                   0.4760                 358.884034                        313.5                    469.00                     634.1          0.3920               0.1246                 0.9352   
+
+    Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Stress Rank Score  
+3   0.259106    1.412412    -19.419663                148.621862           0.975529  
+4   0.259106    1.412412    -19.419663                148.621862           0.950676  
+8   0.259106    1.412412    -19.419663                148.621862           0.878774  
+22  0.259106    1.412412    -19.419663                148.621862           0.397834  
+32  0.259106    1.412412    -19.419663                148.621862          -0.512903  
+16  0.259106    1.412412    -19.419663                148.621862           0.711939  
+19  0.259106    1.412412    -19.419663                148.621862           0.662035  
+17  0.259106    1.412412    -19.419663                148.621862           0.694935  
+26  0.259106    1.412412    -19.419663                148.621862           0.123214  
+27  0.259106    1.412412    -19.419663                148.621862          -0.336900  
+9   0.256320    1.389433    -21.516075                150.191855           0.870422  
+37  0.259106    1.412412    -19.419663                148.621862          -2.181125  
+35  0.259106    1.412412    -19.419663                148.621862          -0.792089  
+1   0.270884    1.303958    -20.952006                172.880804           0.987684  
+7   0.270884    1.303958    -20.952006                172.880804           0.936711  
+10  0.270884    1.303958    -20.952006                172.880804           0.848676  
+21  0.270884    1.303958    -20.952006                172.880804           0.421707  
+28  0.270884    1.303958    -20.952006                172.880804          -0.352287  
+18  0.270884    1.303958    -20.952006                172.880804           0.675031  
+23  0.270884    1.303958    -20.952006                172.880804           0.311720  
+15  0.270884    1.303958    -20.952006                172.880804           0.725751  
+24  0.270884    1.303958    -20.952006                172.880804           0.269168  
+29  0.270884    1.303958    -20.952006                172.880804          -0.385436  
+11  0.268107    1.286367    -22.963874                174.460475           0.847942  
+36  0.270884    1.303958    -20.952006                172.880804          -2.110536  
+33  0.270884    1.303958    -20.952006                172.880804          -0.702351  
+0   0.276101    1.309754    -20.978330                173.439793           1.005534  
+2   0.276101    1.309754    -20.978330                173.439793           0.985403  
+5   0.276101    1.309754    -20.978330                173.439793           0.949475  
+20  0.276101    1.309754    -20.978330                173.439793           0.488442  
+30  0.276101    1.309754    -20.978330                173.439793          -0.401251  
+13  0.276101    1.309754    -20.978330                173.439793           0.740012  
+14  0.276101    1.309754    -20.978330                173.439793           0.731091  
+12  0.276101    1.309754    -20.978330                173.439793           0.840566  
+25  0.276101    1.309754    -20.978330                173.439793           0.181713  
+31  0.276101    1.309754    -20.978330                173.439793          -0.477517  
+6   0.273365    1.292775    -22.952879                174.992799           0.937883  
+38  0.276101    1.309754    -20.978330                173.439793          -2.297639  
+34  0.276101    1.309754    -20.978330                173.439793          -0.756062  
+
+================ STRESS CANDIDATE SURVIVAL SUMMARY ================
+             Candidate  Baseline Payout  Baseline Mean Days  Baseline Median Days  Baseline Fail MaxLoss %  Baseline Fail MaxDailyLoss %  Worst Payout All Stress  Worst Payout Single Stress  \
+0        safer_fast_85           0.8658          241.013860                 209.0                   0.1296                        0.0046                   0.0082                      0.5168   
+1         max_speed_80           0.8004          192.482509                 167.0                   0.1918                        0.0078                   0.0224                      0.4740   
+2  main_balanced_speed           0.8208          200.259016                 178.0                   0.1556                        0.0236                   0.0192                      0.4680   
+
+   Worst Payout Combined Stress  Max Fail MaxLoss % All Stress  Max Fail MaxDailyLoss % All Stress  Max P90 Days All Passing  Avg Stress Rank Score  Pass Baseline >=80%  Pass Single Stress >=75%  \
+0                        0.0082                         0.8152                              0.1732                     665.8               0.225204                 True                     False   
+1                        0.0224                         0.7858                              0.1910                     534.5               0.190291                 True                     False   
+2                        0.0192                         0.7112                              0.2694                     542.2               0.187872                 True                     False   
+
+   Pass Combined Stress >=65%  Stress Gate Pass  
+0                       False             False  
+1                       False             False  
+2                       False             False  
+
+================ BASELINE-ONLY COMPARISON ================
+              Candidate Stress Scenario  Is Combined Stress  MR_FX Regime On  Exposure Factor  Daily Cutoff Cutoff Execution Mode  Block Len  Gain Multiplier  Loss Multiplier  Daily Drag  \
+10         max_speed_80        baseline               False             True             0.85        -0.035           observed_h1         20              1.0              1.0         0.0   
+8   main_balanced_speed        baseline               False             True             0.90        -0.035           observed_h1         20              1.0              1.0         0.0   
+5         safer_fast_85        baseline               False             True             0.70        -0.035           observed_h1         20              1.0              1.0         0.0   
+
+    P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  P75 Total Days To Payout  P90 Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  Avg Cutoff Hits / Sim  \
+10                   0.8004                 192.482509                        167.0                    244.00                     334.9          0.1918               0.0078                 1.1668   
+8                    0.8208                 200.259016                        178.0                    251.25                     339.7          0.1556               0.0236                 0.8678   
+5                    0.8658                 241.013860                        209.0                    305.00                     417.2          0.1296               0.0046                 0.6090   
+
+    Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Stress Rank Score  
+10  0.270884    1.303958    -20.952006                172.880804           0.848676  
+8   0.259106    1.412412    -19.419663                148.621862           0.878774  
+5   0.276101    1.309754    -20.978330                173.439793           0.949475  
+
+================ COMBINED STRESS ONLY ================
+              Candidate    Stress Scenario  Is Combined Stress  MR_FX Regime On  Exposure Factor  Daily Cutoff   Cutoff Execution Mode  Block Len  Gain Multiplier  Loss Multiplier  Daily Drag  \
+36         max_speed_80      combined_hard                True             True             0.85        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+37  main_balanced_speed      combined_hard                True             True             0.90        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+38        safer_fast_85      combined_hard                True             True             0.70        -0.035  delayed_2bar_plus_25bp        120             0.90             1.10      0.0007   
+34        safer_fast_85  combined_moderate                True             True             0.70        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+35  main_balanced_speed  combined_moderate                True             True             0.90        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+33         max_speed_80  combined_moderate                True             True             0.85        -0.035            delayed_1bar         60             0.95             1.05      0.0003   
+
+    P(Reach Payout Overall)  Mean Total Days To Payout  Median Total Days To Payout  P75 Total Days To Payout  P90 Total Days To Payout  Fail MaxLoss %  Fail MaxDailyLoss %  Avg Cutoff Hits / Sim  \
+36                   0.0224                 272.544643                        214.0                    327.75                     534.5          0.7858               0.1910                 1.4224   
+37                   0.0192                 258.239583                        220.5                    385.50                     510.0          0.7112               0.2694                 1.1426   
+38                   0.0082                 340.219512                        307.0                    405.00                     511.0          0.8152               0.1732                 1.1490   
+34                   0.4760                 358.884034                        313.5                    469.00                     634.1          0.3920               0.1246                 0.9352   
+35                   0.4552                 296.641916                        266.0                    382.00                     514.0          0.3292               0.2150                 1.1884   
+33                   0.4366                 274.060467                        239.0                    351.00                     487.4          0.4248               0.1378                 1.4900   
+
+    Raw CAGR  Raw Sharpe  Raw Max DD %  Raw Avg Gross Exposure %  Stress Rank Score  
+36  0.270884    1.303958    -20.952006                172.880804          -2.110536  
+37  0.259106    1.412412    -19.419663                148.621862          -2.181125  
+38  0.276101    1.309754    -20.978330                173.439793          -2.297639  
+34  0.276101    1.309754    -20.978330                173.439793          -0.756062  
+35  0.259106    1.412412    -19.419663                148.621862          -0.792089  
+33  0.270884    1.303958    -20.952006                172.880804          -0.702351  
+
+================ RAW ATTRIBUTION ================
+              Candidate          Budget Case  MR_FX Regime On Strategy  Target Budget Share %      Total PnL  PnL Contribution %  Variance Contribution Approx %  PnL In MaxDD Window  \
+2   main_balanced_speed  main_balanced_speed             True    TF_EQ                  11.25  430773.455788           35.658015                       44.944133         -7175.696638   
+0   main_balanced_speed  main_balanced_speed             True    MR_EQ                  15.00  407460.822021           33.728271                       33.222438        -37215.796748   
+1   main_balanced_speed  main_balanced_speed             True    MR_FX                  73.75  369834.817490           30.613714                       21.833429        -59036.943461   
+5   main_balanced_speed  main_balanced_speed            False    TF_EQ                  11.25  423776.055603           36.230690                       44.308855         -6511.878683   
+3   main_balanced_speed  main_balanced_speed            False    MR_EQ                  15.00  400588.547306           34.248276                       32.992589        -36066.097554   
+4   main_balanced_speed  main_balanced_speed            False    MR_FX                  73.75  345295.858289           29.521034                       22.698557        -75000.387218   
+8          max_speed_80         max_speed_80             True    TF_EQ                  17.50  714117.058767           51.627211                       74.650571        -91522.544364   
+7          max_speed_80         max_speed_80             True    MR_FX                  73.75  400738.169566           28.971432                       15.897179        -56334.993368   
+6          max_speed_80         max_speed_80             True    MR_EQ                   8.75  268363.128670           19.401357                        9.452250         -9039.461105   
+11         max_speed_80         max_speed_80            False    TF_EQ                  17.50  702940.134803           52.458768                       73.938245        -88489.067385   
+10         max_speed_80         max_speed_80            False    MR_FX                  73.75  373107.563742           27.844139                       16.602774        -72979.184078   
+9          max_speed_80         max_speed_80            False    MR_EQ                   8.75  263938.284323           19.697093                        9.458981         -8783.282234   
+14        safer_fast_85        safer_fast_85             True    TF_EQ                  17.50  741805.107246           50.538553                       73.172982        -96111.782822   
+13        safer_fast_85        safer_fast_85             True    MR_FX                  72.50  407887.670867           27.789041                       15.075057        -57979.199966   
+12        safer_fast_85        safer_fast_85             True    MR_EQ                  10.00  318107.663687           21.672406                       11.751961        -10911.918061   
+17        safer_fast_85        safer_fast_85            False    TF_EQ                  17.50  730294.685145           51.325077                       72.491636        -92983.435399   
+16        safer_fast_85        safer_fast_85            False    MR_FX                  72.50  379660.540101           26.682525                       15.756809        -75162.383034   
+15        safer_fast_85        safer_fast_85            False    MR_EQ                  10.00  312925.618328           21.992398                       11.751555        -10608.159758   
+
+    MaxDD Loss Contribution %  Avg Gross Exposure %  Max Gross Exposure %  
+2                    5.206818             61.009365            119.883437  
+0                   27.004470             20.412711            157.335028  
+1                   42.838297             67.199786            762.853465  
+5                    4.312835             61.032587            119.883437  
+3                   23.886675             20.416022            158.083140  
+4                   49.672961             68.743246            762.853465  
+8                   52.948148             93.807377            187.357096  
+7                   32.591244             67.198043            762.853465  
+6                    5.229561             11.875384             91.123689  
+11                  47.283836             93.841748            187.357096  
+10                  38.996182             68.741432            762.853465  
+9                    4.693317             11.877296             91.123689  
+14                  52.918059             93.800186            187.448754  
+13                  31.922691             66.057041            749.398553  
+12                   6.007978             13.582565            104.473523  
+17                  47.357249             93.833951            187.448754  
+16                  38.280837             67.574132            749.398553  
+15                   5.402825             13.584715            104.473523  
+
+================ CUTOFF ATTRIBUTION SUMMARY ================
+            Budget Case Stress Scenario  Cutoff Level  Exposure Factor Dominant Losing Strategy  Historical Cutoff Hit Count
+0   main_balanced_speed        baseline        -0.035             0.90                    MR_EQ                           10
+1   main_balanced_speed        baseline        -0.035             0.90                    MR_FX                            6
+2   main_balanced_speed        baseline        -0.035             0.90                    TF_EQ                            3
+3   main_balanced_speed   combined_hard        -0.035             0.90                    MR_EQ                           10
+4   main_balanced_speed   combined_hard        -0.035             0.90                    MR_FX                            6
+5   main_balanced_speed   combined_hard        -0.035             0.90                    TF_EQ                            3
+8          max_speed_80        baseline        -0.035             0.85                    TF_EQ                           16
+7          max_speed_80        baseline        -0.035             0.85                    MR_FX                            7
+6          max_speed_80        baseline        -0.035             0.85                    MR_EQ                            1
+11         max_speed_80   combined_hard        -0.035             0.85                    TF_EQ                           16
+10         max_speed_80   combined_hard        -0.035             0.85                    MR_FX                            7
+9          max_speed_80   combined_hard        -0.035             0.85                    MR_EQ                            1
+13        safer_fast_85        baseline        -0.035             0.70                    TF_EQ                            6
+12        safer_fast_85        baseline        -0.035             0.70                    MR_FX                            4
+15        safer_fast_85   combined_hard        -0.035             0.70                    TF_EQ                            6
+14        safer_fast_85   combined_hard        -0.035             0.70                    MR_FX                            4
+
+Exported CSV files:
+  candidate_stress_test_results.csv
+  candidate_stress_survival_summary.csv
+  candidate_stress_raw_summary.csv
+  candidate_stress_raw_attribution.csv
+  candidate_stress_cutoff_attribution.csv
+
+--- IMPORTANT INTERPRETATION NOTE ---
+This version is not another optimizer. It is a stress/kill-test for three selected candidate configurations.
+Day-path stresses are deterministic proxies: cost drag, missed-winner haircut, loss-tail multiplier, bad sequencing, and delayed/gapped cutoff execution.
+Daily cutoff sim still uses historical H1 day paths; live tick/equity monitoring can be better or worse depending on execution and broker behavior.
+Use this step to eliminate fragile candidates, not to overfit a new optimum.
