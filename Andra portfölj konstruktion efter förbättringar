@@ -3686,4 +3686,44 @@ Exempel:
 | main_balanced_speed |          82.08% |        46.80% |         53.30% |         63.14% |            45.52% |         1.92% |
 | max_speed_80        |          80.04% |        47.40% |         49.08% |         63.70% |            43.66% |         2.24% |
 | safer_fast_85       |          86.58% |        51.68% |         52.34% |         67.04% |            47.60% |         0.82% |
-Det betyder att portföljen fortfarande är för beroende av att edge, fills och kostnader beter sig nära backtestet.
+Det betyder att portföljen fortfarande är för beroende av att edge, fills och kostnader beter sig nära backtestet. Av de tre är safer_fast_85 bäst som robusthetsbas, 
+men den är fortfarande inte godkänd. Den har högst baseline payout, bäst worst single-stress payout, och lägst baseline daily/max-loss risk, men den kollapsar ändå 
+i combined stress. Så ranking efter stress blir:
+1. safer_fast_85  — bäst robusthetsbas, men för långsam/fortfarande stresskänslig
+2. main_balanced_speed — bra baseline men för känslig mot cutoff delay och combined stress
+3. max_speed_80 — snabbast baseline, men för nära 80%-gränsen och för hög tail-risk
+Innan vi kastar allt måste vi kontrollera en sak i koden:
+cost_drag_3bp och cost_drag_7bp verkar extremt straffande. Om dessa dras som daglig account-level drag snarare än som extra kostnad per trade / per turnover / 
+per exposure, då är de sannolikt för hårda. En flat 7 bp daglig drag motsvarar ett väldigt stort årligt negativt tryck. Så vi vill inte säga “strategin är död”. 
+Vi säger:
+De här kandidaterna klarar inte den stressmodell vi just körde.
+Nu måste vi separera realistisk stress från överdriven stress.
+Nästa steg är att ta vidare safer_fast_85 och main_balanced_speed, men testa lägre exposure:
+ROBUSTNESS_RETEST_CANDIDATES = {
+    "safer_fast_85": {
+        "TF_EQ": 1.75,
+        "MR_EQ": 1.00,
+        "MR_FX": 7.25,
+    },
+    "main_balanced_speed": {
+        "TF_EQ": 1.125,
+        "MR_EQ": 1.50,
+        "MR_FX": 7.375,
+    },
+}
+med:
+EXPOSURE_GRID = [0.50, 0.55, 0.60, 0.65, 0.70]
+CUTOFF_GRID = [-0.030, -0.035, -0.040]
+Samt att göra kostnadsstress mer realistisk. I stället för flat daily drag bör vi ha separata stressar:
+extra cost per trade
+extra slippage per trade
+extra cost proportional to gross exposure
+missed trade probability
+delayed entry/exit
+Det är mer korrekt än att dra 3–7 bp varje dag från hela portföljen.
+Beslut just nu:
+Ingen kandidat godkänd.
+max_speed_80 ska strykas som production-kandidat.
+main_balanced_speed kan sparas som jämförelse.
+safer_fast_85 är bästa bas för nästa robusthetsrunda.
+Nästa kodsteg bör alltså vara robustness retest med lägre exposure och förbättrad kostnadsmodell, inte mer optimering runt de här höga exposure-nivåerna.
